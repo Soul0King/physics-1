@@ -12,18 +12,16 @@ See documentation here: https://www.raylib.com/, and examples here: https://www.
 const unsigned int TARGET_FPS = 50;
 float dt = 1.0f / TARGET_FPS;
 float time = 0;
-float x = 500;
-float y = 500;
-float frequency = 1;
-float amplitude = 100;
+
+float speed = 100;
+float angle = 0;
 
 void update()
 {
 	dt = 1.0f / TARGET_FPS;
 	time += dt;
 
-	x = x + (-sin(time * frequency)) * frequency * amplitude * dt;
-	y = y + (cos(time * frequency)) * frequency * amplitude * dt;
+
 
 }
 void draw()
@@ -35,13 +33,19 @@ void draw()
 
 
 	GuiSliderBar(Rectangle{ 10, 10, 800, 20 }, "", TextFormat("%.2f", time), &time, 0, 240);
-	GuiSliderBar(Rectangle{ 10, 30, 800, 20 }, "", TextFormat("%.2f", frequency), &frequency, 0, 240);
-	GuiSliderBar(Rectangle{ 10, 50, 800, 20 }, "", TextFormat("%.2f", amplitude), &amplitude, 0, 240);
-	DrawText(TextFormat("T: %3.2f", time), GetScreenWidth() - 150, 5, 30, LIGHTGRAY);
-	DrawText(TextFormat("f: %3.2f", frequency), GetScreenWidth() - 150, 25, 30, LIGHTGRAY);
-	DrawText(TextFormat("a: %3.2f", amplitude), GetScreenWidth() - 150, 45, 30, LIGHTGRAY);
 
-	DrawCircle(x, y, 70, RED);
+	GuiSliderBar(Rectangle{ 10, 30, 800, 20 }, "Speed", TextFormat("Speed: %.0f", speed), &speed, -1000, 1000);
+
+	GuiSliderBar(Rectangle{ 10, 50, 800, 20 }, "Angle", TextFormat("Angle: %.0f Degrees", angle), &angle, -180, 180);
+
+	DrawText(TextFormat("T: %3.2f", time), GetScreenWidth() - 150, 5, 30, LIGHTGRAY);
+
+	Vector2 startPos = {100, GetScreenHeight() - 100};
+	Vector2 velocity = { speed * cos(angle), speed * sin(angle)};
+
+	DrawLineEx(startPos, startPos + velocity, 3, RED);
+
+	//DrawCircle(x, y, 70, RED);
 
 	EndDrawing();
 
