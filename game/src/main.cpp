@@ -15,6 +15,8 @@ float time = 0;
 
 float speed = 100;
 float angle = 0;
+float startX = 100;
+float startY = GetScreenHeight() - 100;
 
 void update()
 {
@@ -38,9 +40,13 @@ void draw()
 
 	GuiSliderBar(Rectangle{ 10, 50, 800, 20 }, "Angle", TextFormat("Angle: %.0f Degrees", angle), &angle, -180, 180);
 
+	GuiSliderBar(Rectangle{ 10, 70, 800, 20 }, "StartPosX", TextFormat("StartPosX: %.0f", startX), &startX, 100, 900);
+
+	GuiSliderBar(Rectangle{ 10, 90, 800, 20 }, "StartPosY", TextFormat("StartPosY: %.0f", startY), &startY, 200, 500);
+
 	DrawText(TextFormat("T: %3.2f", time), GetScreenWidth() - 150, 5, 30, LIGHTGRAY);
 
-	Vector2 startPos = {100, GetScreenHeight() - 100};
+	Vector2 startPos = { startX, startY };
 	Vector2 velocity = { speed * cos(angle * DEG2RAD), -speed * sin(angle * DEG2RAD)};
 
 	DrawLineEx(startPos, startPos + velocity, 3, RED);
