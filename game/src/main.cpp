@@ -41,7 +41,7 @@ void draw()
 	DrawText(TextFormat("T: %3.2f", time), GetScreenWidth() - 150, 5, 30, LIGHTGRAY);
 
 	Vector2 startPos = {100, GetScreenHeight() - 100};
-	Vector2 velocity = { speed * cos(angle), speed * sin(angle)};
+	Vector2 velocity = { speed * cos(angle * DEG2RAD), -speed * sin(angle * DEG2RAD)};
 
 	DrawLineEx(startPos, startPos + velocity, 3, RED);
 
