@@ -18,12 +18,28 @@ float angle = 0;
 float startX = 100;
 float startY = GetScreenHeight() - 100;
 
+Vector2 position = { 500, 500 };
+Vector2 velocity = { 0,0 };
+Vector2 accelerationGravity = { 0, 9 };
+
 void update()
 {
 	dt = 1.0f / TARGET_FPS;
 	time += dt;
 
 
+
+	//vel = change in position / time, therefore     change in position = vel * time 
+	position = position + velocity * dt;
+
+	//accel = deltaV / time (change in velocity over time) therefore     deltaV = accel * time
+	velocity = velocity + accelerationGravity * dt;
+
+	if (IsKeyPressed(KEY_SPACE))
+	{
+		position = { 100, (float)GetScreenHeight() - 100 };
+		velocity = { speed * (float)cos(angle * DEG2RAD), -speed * (float)sin(angle * DEG2RAD) };
+	}
 
 }
 void draw()
@@ -44,6 +60,8 @@ void draw()
 
 	GuiSliderBar(Rectangle{ 10, 90, 800, 20 }, "StartPosY", TextFormat("StartPosY: %.0f", startY), &startY, 200, 500);
 
+	GuiSliderBar(Rectangle{ 10, 120, 500, 30 }, "Gravity Y", TextFormat("Gravity Y: %.0f Px/sec^2", accelerationGravity.y), &accelerationGravity.y, -1000, 1000);
+
 	DrawText(TextFormat("T: %3.2f", time), GetScreenWidth() - 150, 5, 30, LIGHTGRAY);
 
 	Vector2 startPos = { startX, startY };
@@ -51,7 +69,7 @@ void draw()
 
 	DrawLineEx(startPos, startPos + velocity, 3, RED);
 
-	//DrawCircle(x, y, 70, RED);
+	DrawCircle(position.x, position.y, 15, RED);
 
 	EndDrawing();
 
