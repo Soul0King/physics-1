@@ -87,28 +87,30 @@ public:
 	}
 
 	void checkCollisions() {
+		std::vector<bool> isColliding(objekts.size(), false);
+
 		for (int i = 0; i < objekts.size(); i++) {
 			for (int j = i + 1; j < objekts.size(); j++) {
 
-				FizziksObjekt* objektPointerA = objekts[i];
+				FizziksCircle* circleA = (FizziksCircle*)objekts[i];
+				FizziksCircle* circleB = (FizziksCircle*)objekts[j];
+
+				/*FizziksObjekt* objektPointerA = objekts[i];
 				FizziksCircle* circlePointerA = (FizziksCircle*)objektPointerA;
-
-				
 				FizziksObjekt* objektPointerB = objekts[j];
-				FizziksCircle* circlePointerB = (FizziksCircle*)objektPointerB;
+				FizziksCircle* circlePointerB = (FizziksCircle*)objektPointerB;*/
 
-				if (CircleCircleOverlap(circlePointerA, circlePointerB)) {
-					objektPointerA->color = RED;
-					objektPointerB->color = RED;
+				if (CircleCircleOverlap(circleA, circleB)) {
+					isColliding[i] = true;
+					isColliding[j] = true;
 				}
-				else {
-					objektPointerA->color = GREEN;
-					objektPointerB->color = GREEN;
-				}
+				
 			}
 		}
 		
-
+		for (int i = 0; i < objekts.size(); i++) {
+			objekts[i]->color = isColliding[i] ? RED : GREEN;
+		}
 	}
 };
 
