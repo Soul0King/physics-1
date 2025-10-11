@@ -16,40 +16,99 @@ float dt = 1.0f / TARGET_FPS;
 float time = 0;
 
 class FizziksObjekt {
+
 public:
 
 	Vector2 position = { 0, 0 };
 	Vector2 velocity = { 0,0 };
 	float mass = 1; // in kg
 
-	float radius = 15; // circle radius in pixles
 	std::string name = "objekt";
-	Color color = RED;
+	Color color = GREEN;
 
-	void draw() {
+	virtual void draw() {
+		DrawCircle(position.x, position.y, 2, color);
+	}
+};
+
+class FizziksBox : public FizziksObjekt {
+public:
+	Vector2 size; // x = width, y = hight
+};
+
+class FizziksCircle : public FizziksObjekt {
+public:
+	float radius = 15; // circle radius in pixels
+
+	void draw() override {
 		DrawCircle(position.x, position.y, radius, color);
 		DrawLineEx(position, position + velocity, 1, color);
 	}
 };
 
+bool CircleCircleOverlap(FizziksCircle* circleA, FizziksCircle* circleB) {
+	Vector2 displacementFromAToB = circleB->position - circleA->position;
+	float diatance = Vector2Length(displacementFromAToB);
+	float sumOfRadii = circleA->radius + circleB->radius;
+
+	if (sumOfRadii > diatance) {
+		return true;
+	}
+	else
+		return false;
+}
+
 class FizziksWorld {
 public: 
-	std::vector<FizziksObjekt> objekts;
+	std::vector<FizziksObjekt*> objekts;
+
 	Vector2 accelerationGravity = { 0, 9 };
 
-	void add(FizziksObjekt newObject) {
+	void add(FizziksObjekt* newObject) {
 		objekts.push_back(newObject);
 	}
 
 	// update state of all phiysics objects
 	void update() {
+		
+
 		for (int i = 0; i < objekts.size(); i++) {
+
+			FizziksObjekt* object = objekts[i];
+
 			//vel = change in position / time, therefore     change in position = vel * time 
-			objekts[i].position = objekts[i].position + objekts[i].velocity * dt;
+			object->position = object->position + object->velocity * dt;
 
 			//accel = deltaV / time (change in velocity over time) therefore     deltaV = accel * time
-			objekts[i].velocity = objekts[i].velocity + accelerationGravity * dt;
+			object->velocity = object->velocity + accelerationGravity * dt;
 		}
+
+		checkCollisions();
+	}
+
+	void checkCollisions() {
+		for (int i = 0; i < objekts.size(); i++) {
+			for (int j = i + 1; j < objekts.size(); j++) {
+
+				FizziksObjekt* objektPointerA = objekts[i];
+				FizziksCircle* circlePointerA = (FizziksCircle*)objektPointerA;
+
+				
+				FizziksObjekt* objektPointerB = objekts[j];
+				FizziksCircle* circlePointerB = (FizziksCircle*)objektPointerB;
+
+				if (CircleCircleOverlap(circlePointerA, circlePointerB)) {
+					objektPointerA->color = RED;
+					objektPointerB->color = RED;
+				}
+				else {
+					objektPointerA->color = GREEN;
+					objektPointerB->color = GREEN;
+				}
+			}
+		}
+		
+
 	}
 };
 
@@ -61,21 +120,42 @@ float startY = 500;
 
 FizziksWorld world;
 
+void cleanup() {
+
+	for (int i = 0; i < world.objekts.size(); i++) {
+
+		FizziksObjekt* objekt = world.objekts[i];
+
+		if (	objekt->position.y > GetScreenHeight()
+			||	objekt->position.y < 0
+			||	objekt->position.x > GetScreenHeight()
+			||	objekt->position.x < 0
+			)
+		{
+			auto iterator = (world.objekts.begin() + i);
+			FizziksObjekt* pointerToFizziksObjekt = *iterator;
+			delete pointerToFizziksObjekt;
+
+			world.objekts.erase(iterator);
+			i--;
+		}
+	}
+}
 
 void update()
 {
 	dt = 1.0f / TARGET_FPS;
 	time += dt;
 
-
+	cleanup();
 	world.update();
 	
 
 	if (IsKeyPressed(KEY_SPACE))
 	{
-		FizziksObjekt newBird;
-		newBird.position = { startX, startY };
-		newBird.velocity = { speed * (float)cos(angle * DEG2RAD), -speed * (float)sin(angle * DEG2RAD) };
+		FizziksCircle* newBird = new FizziksCircle();
+		newBird->position = { startX, startY };
+		newBird->velocity = { speed * (float)cos(angle * DEG2RAD), -speed * (float)sin(angle * DEG2RAD) };
 
 		world.add(newBird);
 	}
@@ -109,7 +189,7 @@ void draw()
 	DrawLineEx(startPos, startPos + velocity, 3, RED);
 
 	for (int i = 0; i < world.objekts.size(); i++) {
-		world.objekts[i].draw();
+		world.objekts[i]->draw();
 	}
 
 	EndDrawing();
