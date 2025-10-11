@@ -95,10 +95,6 @@ public:
 				FizziksCircle* circleA = (FizziksCircle*)objekts[i];
 				FizziksCircle* circleB = (FizziksCircle*)objekts[j];
 
-				/*FizziksObjekt* objektPointerA = objekts[i];
-				FizziksCircle* circlePointerA = (FizziksCircle*)objektPointerA;
-				FizziksObjekt* objektPointerB = objekts[j];
-				FizziksCircle* circlePointerB = (FizziksCircle*)objektPointerB;*/
 
 				if (CircleCircleOverlap(circleA, circleB)) {
 					isColliding[i] = true;
