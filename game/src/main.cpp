@@ -15,10 +15,15 @@ const unsigned int TARGET_FPS = 50;
 float dt = 1.0f / TARGET_FPS;
 float time = 0;
 
+enum FizziksShape {
+	CIRCLE,
+	HALF_SPACE
+};
+
 class FizziksObjekt {
 
 public:
-
+	bool isStatic = false;
 	Vector2 position = { 0, 0 };
 	Vector2 velocity = { 0,0 };
 	float mass = 1; // in kg
@@ -29,12 +34,11 @@ public:
 	virtual void draw() {
 		DrawCircle(position.x, position.y, 2, color);
 	}
+
+	virtual FizziksShape Shape() = 0;
 };
 
-class FizziksBox : public FizziksObjekt {
-public:
-	Vector2 size; // x = width, y = hight
-};
+
 
 class FizziksCircle : public FizziksObjekt {
 public:
@@ -43,6 +47,48 @@ public:
 	void draw() override {
 		DrawCircle(position.x, position.y, radius, color);
 		DrawLineEx(position, position + velocity, 1, color);
+	}
+
+	// Inherited via FizziksObjekt
+	FizziksShape Shape() override
+	{
+		return CIRCLE;
+	}
+};
+
+class FizziksHalfspace : public FizziksObjekt {
+private:
+	float rotation = 0;
+	Vector2 normal = { 0, -1 };
+
+public:
+
+	void setRotationDegrees(float rotationDegrees) {
+		rotation = rotationDegrees;
+		normal = Vector2Rotate({ 0, -1 }, rotation * DEG2RAD);
+	}
+
+	float getRotation() {
+		return rotation;
+	}
+
+	Vector2 getNormal() {
+		return normal;
+	}
+
+	void draw() override {
+		DrawCircle(position.x, position.y, 8, color);
+
+		DrawLineEx(position, position + normal * 30, 1, color);
+
+		Vector2 parallelToSurface = Vector2Rotate(normal, PI * 0.5f);
+		DrawLineEx(position - parallelToSurface * 4000, position + parallelToSurface * 4000, 1, color);
+	}
+
+	// Inherited via FizziksObjekt
+	FizziksShape Shape() override
+	{
+		return HALF_SPACE;
 	}
 };
 
@@ -56,6 +102,20 @@ bool CircleCircleOverlap(FizziksCircle* circleA, FizziksCircle* circleB) {
 	}
 	else
 		return false;
+}
+
+bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace) {
+
+	Vector2 displacementToCircle = circle->position - halfspace->position;
+
+	float distance = Vector2Length(displacementToCircle);
+
+	DrawLineEx(circle->position, halfspace->position, 1, GRAY);
+
+	Vector2 midpoint = halfspace->position + displacementToCircle * 0.5;
+	DrawText(TextFormat("D: %6.2", distance), midpoint.x, midpoint.y, 30, GRAY);
+
+	return true;
 }
 
 class FizziksWorld {
@@ -74,13 +134,15 @@ public:
 
 		for (int i = 0; i < objekts.size(); i++) {
 
-			FizziksObjekt* object = objekts[i];
+			FizziksObjekt* objekt = objekts[i];
+
+			if (objekt->isStatic) continue;
 
 			//vel = change in position / time, therefore     change in position = vel * time 
-			object->position = object->position + object->velocity * dt;
+			objekt->position = objekt->position + objekt->velocity * dt;
 
 			//accel = deltaV / time (change in velocity over time) therefore     deltaV = accel * time
-			object->velocity = object->velocity + accelerationGravity * dt;
+			objekt->velocity = objekt->velocity + accelerationGravity * dt;
 		}
 
 		checkCollisions();
@@ -92,15 +154,32 @@ public:
 		for (int i = 0; i < objekts.size(); i++) {
 			for (int j = i + 1; j < objekts.size(); j++) {
 
-				FizziksCircle* circleA = (FizziksCircle*)objekts[i];
-				FizziksCircle* circleB = (FizziksCircle*)objekts[j];
+				FizziksObjekt* objektPointerA = objekts[i];
+				FizziksObjekt* objektPointerB = objekts[j];
 
+				FizziksShape shapeOfA = objektPointerA->Shape();
+				FizziksShape shapeOfB = objektPointerB->Shape();
 
-				if (CircleCircleOverlap(circleA, circleB)) {
-					isColliding[i] = true;
-					isColliding[j] = true;
+				if (shapeOfA == CIRCLE && shapeOfB == CIRCLE) {
+
+					if (CircleCircleOverlap((FizziksCircle*)objektPointerA, (FizziksCircle*)objektPointerB)) {
+						isColliding[i] = true;
+						isColliding[j] = true;
+					}
 				}
-				
+				else if (shapeOfA == CIRCLE && shapeOfB == HALF_SPACE) {
+					if (CircleHalfspaceOverlap((FizziksCircle*)objektPointerA, (FizziksHalfspace*)objektPointerB)) {
+						isColliding[i] = true;
+						isColliding[j] = true;
+					}
+				}
+				else if (shapeOfA == HALF_SPACE && shapeOfB == CIRCLE) {
+					if (CircleHalfspaceOverlap((FizziksCircle*)objektPointerB, (FizziksHalfspace*)objektPointerA)) {
+						isColliding[i] = true;
+						isColliding[j] = true;
+					}
+				}
+
 			}
 		}
 		
@@ -117,6 +196,8 @@ float startY = 500;
 
 
 FizziksWorld world;
+FizziksHalfspace halfspace;
+
 
 void cleanup() {
 
@@ -126,7 +207,7 @@ void cleanup() {
 
 		if (	objekt->position.y > GetScreenHeight()
 			||	objekt->position.y < 0
-			||	objekt->position.x > GetScreenHeight()
+			||	objekt->position.x > GetScreenWidth()
 			||	objekt->position.x < 0
 			)
 		{
@@ -158,6 +239,8 @@ void update()
 		world.add(newBird);
 	}
 
+	
+
 }
 void draw()
 {
@@ -173,11 +256,11 @@ void draw()
 
 	GuiSliderBar(Rectangle{ 10, 50, 800, 20 }, "Angle", TextFormat("Angle: %.0f Degrees", angle), &angle, -180, 180);
 
-	GuiSliderBar(Rectangle{ 10, 70, 800, 20 }, "StartPosX", TextFormat("StartPosX: %.0f", startX), &startX, 100, 900);
+	GuiSliderBar(Rectangle{ 10, 70, 400, 20 }, "StartPosX", TextFormat("StartPosX: %.0f", startX), &startX, 0, GetScreenWidth());
 
-	GuiSliderBar(Rectangle{ 10, 90, 800, 20 }, "StartPosY", TextFormat("StartPosY: %.0f", startY), &startY, 200, 500);
+	GuiSliderBar(Rectangle{ 600, 70, 400, 20 }, "StartPosY", TextFormat("StartPosY: %.0f", startY), &startY, 0, GetScreenHeight());
 
-	GuiSliderBar(Rectangle{ 10, 120, 500, 30 }, "Gravity Y", TextFormat("Gravity Y: %.0f Px/sec^2", world.accelerationGravity.y), &world.accelerationGravity.y, -1000, 1000);
+	GuiSliderBar(Rectangle{ 10, 90, 800, 20 }, "Gravity Y", TextFormat("Gravity Y: %.0f Px/sec^2", world.accelerationGravity.y), &world.accelerationGravity.y, -1000, 1000);
 
 	DrawText(TextFormat("T: %3.2f", time), GetScreenWidth() - 150, 5, 30, LIGHTGRAY);
 
@@ -186,9 +269,17 @@ void draw()
 
 	DrawLineEx(startPos, startPos + velocity, 3, RED);
 
+	GuiSliderBar(Rectangle{ 10, 110, 400, 20 }, "halfspace X", TextFormat("X: %.0f", halfspace.position.x), &halfspace.position.x, 0, GetScreenWidth());
+	GuiSliderBar(Rectangle{ 500, 110, 400, 20 }, "Y", TextFormat("Y: %.0f", halfspace.position.y), &halfspace.position.y, 0, GetScreenHeight());
+
+	float halfspaceRotation = halfspace.getRotation();
+	GuiSliderBar(Rectangle{ 10, 130, 800, 20 }, "rotation", TextFormat("rotation: %.0f", halfspace.getRotation()), &halfspaceRotation, -360, 360);
+	halfspace.setRotationDegrees(halfspaceRotation);
+
 	for (int i = 0; i < world.objekts.size(); i++) {
 		world.objekts[i]->draw();
 	}
+
 
 	EndDrawing();
 
@@ -197,6 +288,9 @@ int main()
 {
 	InitWindow(InitialWidth, InitialHeight, "Mactavish Carney 101534351 GAME2005");
 	SetTargetFPS(TARGET_FPS);
+	halfspace.isStatic = true;
+	halfspace.position = { 500, 700 };
+	world.add(&halfspace);
 
 	while (!WindowShouldClose())
 	{
