@@ -108,14 +108,23 @@ bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace) 
 
 	Vector2 displacementToCircle = circle->position - halfspace->position;
 
-	float distance = Vector2Length(displacementToCircle);
+	//dot = Dot(displacementToCircle, normal)
 
-	DrawLineEx(circle->position, halfspace->position, 1, GRAY);
+	//if(dot < radius) then overlapping, return true. else return false.
 
-	Vector2 midpoint = halfspace->position + displacementToCircle * 0.5;
-	DrawText(TextFormat("D: %6.2", distance), midpoint.x, midpoint.y, 30, GRAY);
+	float dot = Vector2DotProduct(displacementToCircle, halfspace->getNormal());
+	Vector2 vectorProjection = halfspace->getNormal() * dot;
 
-	return true;
+
+	DrawLineEx(circle->position, circle->position - vectorProjection, 1, GRAY);
+
+	Vector2 midpoint = circle->position - vectorProjection * 0.5f;
+	DrawText(TextFormat("D: %6.0f", dot), midpoint.x, midpoint.y, 30, GRAY);
+
+	if (dot < circle->radius) {
+		return true;
+	}
+	else return false;
 }
 
 class FizziksWorld {
