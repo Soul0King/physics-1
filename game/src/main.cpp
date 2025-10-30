@@ -94,10 +94,24 @@ public:
 
 bool CircleCircleOverlap(FizziksCircle* circleA, FizziksCircle* circleB) {
 	Vector2 displacementFromAToB = circleB->position - circleA->position;
-	float diatance = Vector2Length(displacementFromAToB);
+	float distance = Vector2Length(displacementFromAToB);
 	float sumOfRadii = circleA->radius + circleB->radius;
+	float overlap = sumOfRadii - distance;
+	
 
-	if (sumOfRadii > diatance) {
+	if (overlap > 0) {
+		Vector2 normalAToB;
+		if (abs(distance) < 0.0001f) {
+			normalAToB = { 0,1 };
+		}
+		else
+			normalAToB = displacementFromAToB / distance;
+
+		Vector2 normalAToB = (displacementFromAToB / distance);
+		Vector2 mtv = normalAToB * overlap; // minimum translation vector
+
+		circleA->position -= mtv * 0.5f;
+		circleB->position += mtv * 0.5f;
 		return true;
 	}
 	else
@@ -108,10 +122,6 @@ bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace) 
 
 	Vector2 displacementToCircle = circle->position - halfspace->position;
 
-	//dot = Dot(displacementToCircle, normal)
-
-	//if(dot < radius) then overlapping, return true. else return false.
-
 	float dot = Vector2DotProduct(displacementToCircle, halfspace->getNormal());
 	Vector2 vectorProjection = halfspace->getNormal() * dot;
 
@@ -121,7 +131,14 @@ bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace) 
 	Vector2 midpoint = circle->position - vectorProjection * 0.5f;
 	DrawText(TextFormat("D: %6.0f", dot), midpoint.x, midpoint.y, 30, GRAY);
 
-	if (dot < circle->radius) {
+	float overlap = circle->radius - dot;
+	
+
+	if (overlap > 0) {
+		Vector2 normalAToB = (vectorProjection / dot);
+		Vector2 mtv = normalAToB * overlap; // minimum translation vector
+
+		circle->position += mtv;
 		return true;
 	}
 	else return false;
@@ -206,6 +223,7 @@ float startY = 500;
 
 FizziksWorld world;
 FizziksHalfspace halfspace;
+FizziksHalfspace halfspace2;
 
 
 void cleanup() {
@@ -300,6 +318,10 @@ int main()
 	halfspace.isStatic = true;
 	halfspace.position = { 500, 700 };
 	world.add(&halfspace);
+	halfspace2.isStatic = true;
+	halfspace2.position = { 200, 400 };
+	halfspace2.setRotationDegrees(10);
+	world.add(&halfspace2);
 
 	while (!WindowShouldClose())
 	{
