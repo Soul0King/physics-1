@@ -107,7 +107,7 @@ bool CircleCircleOverlap(FizziksCircle* circleA, FizziksCircle* circleB) {
 		else
 			normalAToB = displacementFromAToB / distance;
 
-		Vector2 normalAToB = (displacementFromAToB / distance);
+		//Vector2 normalAToB = (displacementFromAToB / distance);
 		Vector2 mtv = normalAToB * overlap; // minimum translation vector
 
 		circleA->position -= mtv * 0.5f;
