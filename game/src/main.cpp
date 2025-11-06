@@ -307,6 +307,28 @@ void draw()
 	}
 
 
+	//FBD draw
+	Vector2 Location = { 500, 500 };
+
+	DrawCircleLines(Location.x, Location.y, 100, WHITE);
+	float mass = 8;
+
+	//draw gravity
+	Vector2 Fgravity = world.accelerationGravity * mass;
+	DrawLine(Location.x, Location.y, Location.x + Fgravity.x, Location.y + Fgravity.y, PURPLE);
+
+	//draw normal force
+	Vector2 FgPerp = halfspace.getNormal() * Vector2DotProduct(Fgravity, halfspace.getNormal());
+	Vector2 Fnormal = FgPerp * -1;
+	DrawLine(Location.x, Location.y, Location.x + Fnormal.x, Location.y + Fnormal.y, GREEN);
+
+	//draw friction
+	Vector2 FgPara = Fgravity - FgPerp;
+	Vector2 Ffriction = FgPara * -1;
+	DrawLine(Location.x, Location.y, Location.x + Ffriction.x, Location.y + Ffriction.y, ORANGE);
+
+
+
 	EndDrawing();
 
 }
@@ -317,10 +339,10 @@ int main()
 	halfspace.isStatic = true;
 	halfspace.position = { 500, 700 };
 	world.add(&halfspace);
-	halfspace2.isStatic = true;
+	/*halfspace2.isStatic = true;
 	halfspace2.position = { 200, 400 };
 	halfspace2.setRotationDegrees(10);
-	world.add(&halfspace2);
+	world.add(&halfspace2);*/
 
 	while (!WindowShouldClose())
 	{
