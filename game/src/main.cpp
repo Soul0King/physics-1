@@ -14,6 +14,7 @@ See documentation here: https://www.raylib.com/, and examples here: https://www.
 const unsigned int TARGET_FPS = 50;
 float dt = 1.0f / TARGET_FPS;
 float time = 0;
+float coefficientOfFriction = 0.5f;
 
 enum FizziksShape {
 	CIRCLE,
@@ -24,9 +25,10 @@ class FizziksObjekt {
 
 public:
 	bool isStatic = false;
-	Vector2 position = { 0, 0 };
+	Vector2 position = { 0,0 };
 	Vector2 velocity = { 0,0 };
 	float mass = 1; // in kg
+	Vector2 netForce = { 0,0 };
 
 	std::string name = "objekt";
 	Color color = GREEN;
@@ -92,56 +94,9 @@ public:
 	}
 };
 
-bool CircleCircleOverlap(FizziksCircle* circleA, FizziksCircle* circleB) {
-	Vector2 displacementFromAToB = circleB->position - circleA->position;
-	float distance = Vector2Length(displacementFromAToB);
-	float sumOfRadii = circleA->radius + circleB->radius;
-	float overlap = sumOfRadii - distance;
-	
+bool CircleCircleOverlap(FizziksCircle* circleA, FizziksCircle* circleB);
+bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace);
 
-	if (overlap > 0) {
-		Vector2 normalAToB;
-		if (abs(distance) < 0.0001f) {
-			normalAToB = { 0,1 };
-		}
-		else
-			normalAToB = displacementFromAToB / distance;
-
-		Vector2 mtv = normalAToB * overlap; // minimum translation vector
-
-		circleA->position -= mtv * 0.5f;
-		circleB->position += mtv * 0.5f;
-		return true;
-	}
-	else
-		return false;
-}
-
-bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace) {
-
-	Vector2 displacementToCircle = circle->position - halfspace->position;
-
-	float dot = Vector2DotProduct(displacementToCircle, halfspace->getNormal());
-	Vector2 vectorProjection = halfspace->getNormal() * dot;
-
-
-	DrawLineEx(circle->position, circle->position - vectorProjection, 1, GRAY);
-
-	Vector2 midpoint = circle->position - vectorProjection * 0.5f;
-	DrawText(TextFormat("D: %6.0f", dot), midpoint.x, midpoint.y, 30, GRAY);
-
-	float overlap = circle->radius - dot;
-	
-
-	if (overlap > 0) {
-		Vector2 normalAToB = (vectorProjection / dot);
-		Vector2 mtv = normalAToB * overlap; // minimum translation vector
-
-		circle->position += mtv;
-		return true;
-	}
-	else return false;
-}
 
 class FizziksWorld {
 public: 
@@ -153,10 +108,26 @@ public:
 		objekts.push_back(newObject);
 	}
 
-	// update state of all phiysics objects
-	void update() {
-		
+	void resetNetForces() {
+		for (int i = 0; i < objekts.size(); i++) {
+			objekts[i]->netForce = { 0,0 };
+		}
+	}
 
+	void addGravityForces() {
+		for (int i = 0; i < objekts.size(); i++) {
+
+			FizziksObjekt* objekt = objekts[i];
+
+			if (objekt->isStatic) continue;
+
+			Vector2 FGravity = accelerationGravity * objekt->mass;
+			objekt->netForce += FGravity;
+			DrawLineEx(objekt->position, objekt->position + FGravity, 1, PURPLE);
+		}
+	}
+
+	void applyKinematics() {
 		for (int i = 0; i < objekts.size(); i++) {
 
 			FizziksObjekt* objekt = objekts[i];
@@ -166,11 +137,24 @@ public:
 			//vel = change in position / time, therefore     change in position = vel * time 
 			objekt->position = objekt->position + objekt->velocity * dt;
 
+			Vector2 acceleration = objekt->netForce/objekt->mass; //a = F/m
+
 			//accel = deltaV / time (change in velocity over time) therefore     deltaV = accel * time
-			objekt->velocity = objekt->velocity + accelerationGravity * dt;
+			objekt->velocity = objekt->velocity + acceleration * dt;
+
+			//DrawLineEx(objekt->position, objekt->position + objekt->netForce, 1, GRAY);
 		}
+	}
+
+	// update state of all phiysics objects
+	void update() {
+		resetNetForces();
+
+		addGravityForces();
 
 		checkCollisions();
+
+		applyKinematics();
 	}
 
 	void checkCollisions() {
@@ -224,6 +208,80 @@ FizziksWorld world;
 FizziksHalfspace halfspace;
 FizziksHalfspace halfspace2;
 
+
+bool CircleCircleOverlap(FizziksCircle* circleA, FizziksCircle* circleB) {
+	Vector2 displacementFromAToB = circleB->position - circleA->position;
+	float distance = Vector2Length(displacementFromAToB);
+	float sumOfRadii = circleA->radius + circleB->radius;
+	float overlap = sumOfRadii - distance;
+
+
+	if (overlap > 0) {
+		Vector2 normalAToB;
+		if (abs(distance) < 0.0001f) {
+			normalAToB = { 0,1 };
+		}
+		else
+			normalAToB = displacementFromAToB / distance;
+
+		Vector2 mtv = normalAToB * overlap; // minimum translation vector
+
+		circleA->position -= mtv * 0.5f;
+		circleB->position += mtv * 0.5f;
+		return true;
+	}
+	else
+		return false;
+}
+
+bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace) {
+
+	Vector2 displacementToCircle = circle->position - halfspace->position;
+
+	float dot = Vector2DotProduct(displacementToCircle, halfspace->getNormal());
+	Vector2 vectorProjection = halfspace->getNormal() * dot;
+
+
+	//DrawLineEx(circle->position, circle->position - vectorProjection, 1, GRAY);
+
+	Vector2 midpoint = circle->position - vectorProjection * 0.5f;
+	//DrawText(TextFormat("D: %6.0f", dot), midpoint.x, midpoint.y, 30, GRAY);
+
+	float overlap = circle->radius - dot;
+
+
+	if (overlap > 0) {
+		Vector2 normalAToB = (vectorProjection / dot);
+		Vector2 mtv = normalAToB * overlap; // minimum translation vector
+
+		circle->position += mtv;
+
+		//get gravity force
+		Vector2 Fgravity = world.accelerationGravity * circle->mass;
+
+		//apply normal force
+
+		Vector2 FgPerp = halfspace->getNormal() * Vector2DotProduct(Fgravity, halfspace->getNormal());
+		Vector2 Fnormal = FgPerp * -1;
+		circle->netForce += Fnormal;
+		DrawLineEx(circle->position, circle->position + Fnormal, 1, GREEN);
+
+		//friction
+		//f = uN
+		float u = coefficientOfFriction;
+		float frictionMagnitude = u * Vector2Length(Fnormal);
+
+		Vector2 FgPara = Fgravity - FgPerp;
+		Vector2 frictionDirection = Vector2Normalize(FgPara) * -1;
+
+		Vector2 Ffriction = frictionDirection * frictionMagnitude;
+
+		circle->netForce += Ffriction;
+		DrawLineEx(circle->position, circle->position + Ffriction, 2, ORANGE);
+		return true;
+	}
+	else return false;
+}
 
 void cleanup() {
 
@@ -302,30 +360,34 @@ void draw()
 	GuiSliderBar(Rectangle{ 10, 130, 800, 20 }, "rotation", TextFormat("rotation: %.0f", halfspace.getRotation()), &halfspaceRotation, -360, 360);
 	halfspace.setRotationDegrees(halfspaceRotation);
 
+	//control for friction
+	GuiSliderBar(Rectangle{ 700, 150, 400, 20 }, "u", TextFormat("Y: %.2f", coefficientOfFriction), &coefficientOfFriction, 0, 1);
+
+
 	for (int i = 0; i < world.objekts.size(); i++) {
 		world.objekts[i]->draw();
 	}
 
 
-	//FBD draw
-	Vector2 Location = { 500, 500 };
+	////FBD draw
+	//Vector2 Location = { 500, 500 };
 
-	DrawCircleLines(Location.x, Location.y, 100, WHITE);
-	float mass = 8;
+	//DrawCircleLines(Location.x, Location.y, 100, WHITE);
+	//float mass = 8;
 
-	//draw gravity
-	Vector2 Fgravity = world.accelerationGravity * mass;
-	DrawLine(Location.x, Location.y, Location.x + Fgravity.x, Location.y + Fgravity.y, PURPLE);
+	////draw gravity
+	//Vector2 Fgravity = world.accelerationGravity * mass;
+	//DrawLine(Location.x, Location.y, Location.x + Fgravity.x, Location.y + Fgravity.y, PURPLE);
 
-	//draw normal force
-	Vector2 FgPerp = halfspace.getNormal() * Vector2DotProduct(Fgravity, halfspace.getNormal());
-	Vector2 Fnormal = FgPerp * -1;
-	DrawLine(Location.x, Location.y, Location.x + Fnormal.x, Location.y + Fnormal.y, GREEN);
+	////draw normal force
+	//Vector2 FgPerp = halfspace.getNormal() * Vector2DotProduct(Fgravity, halfspace.getNormal());
+	//Vector2 Fnormal = FgPerp * -1;
+	//DrawLine(Location.x, Location.y, Location.x + Fnormal.x, Location.y + Fnormal.y, GREEN);
 
-	//draw friction
-	Vector2 FgPara = Fgravity - FgPerp;
-	Vector2 Ffriction = FgPara * -1;
-	DrawLine(Location.x, Location.y, Location.x + Ffriction.x, Location.y + Ffriction.y, ORANGE);
+	////draw friction
+	//Vector2 FgPara = Fgravity - FgPerp;
+	//Vector2 Ffriction = FgPara * -1;
+	//DrawLine(Location.x, Location.y, Location.x + Ffriction.x, Location.y + Ffriction.y, ORANGE);
 
 
 
