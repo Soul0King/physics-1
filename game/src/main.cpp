@@ -14,7 +14,7 @@ See documentation here: https://www.raylib.com/, and examples here: https://www.
 const unsigned int TARGET_FPS = 50;
 float dt = 1.0f / TARGET_FPS;
 float time = 0;
-float coefficientOfFriction = 0.5f;
+
 
 enum FizziksShape {
 	CIRCLE,
@@ -32,6 +32,9 @@ public:
 
 	std::string name = "objekt";
 	Color color = GREEN;
+	Color baseColor = GREEN;
+
+	bool ownedByWorld = false;
 
 	virtual void draw() {
 		DrawCircle(position.x, position.y, 2, color);
@@ -45,6 +48,8 @@ public:
 class FizziksCircle : public FizziksObjekt {
 public:
 	float radius = 15; // circle radius in pixels
+
+	float coefficientOfFriction = 0.5f;
 
 	void draw() override {
 		DrawCircle(position.x, position.y, radius, color);
@@ -104,7 +109,9 @@ public:
 
 	Vector2 accelerationGravity = { 0, 9 };
 
-	void add(FizziksObjekt* newObject) {
+	void add(FizziksObjekt* newObject, bool takeOwnership = false) {
+		if (newObject == nullptr) return;
+		newObject->ownedByWorld = takeOwnership;
 		objekts.push_back(newObject);
 	}
 
@@ -193,7 +200,7 @@ public:
 		}
 		
 		for (int i = 0; i < objekts.size(); i++) {
-			objekts[i]->color = isColliding[i] ? RED : GREEN;
+			objekts[i]->color = isColliding[i] ? RED : objekts[i]->baseColor;
 		}
 	}
 };
@@ -206,7 +213,11 @@ float startY = 500;
 
 FizziksWorld world;
 FizziksHalfspace halfspace;
-FizziksHalfspace halfspace2;
+//FizziksHalfspace halfspace2;
+FizziksCircle* rCircle = new FizziksCircle();
+FizziksCircle* gCircle = new FizziksCircle();
+FizziksCircle* bCircle = new FizziksCircle();
+FizziksCircle* yCircle = new FizziksCircle();
 
 
 bool CircleCircleOverlap(FizziksCircle* circleA, FizziksCircle* circleB) {
@@ -268,11 +279,13 @@ bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace) 
 
 		//friction
 		//f = uN
-		float u = coefficientOfFriction;
+		float u = circle->coefficientOfFriction;
 		float frictionMagnitude = u * Vector2Length(Fnormal);
 
 		Vector2 FgPara = Fgravity - FgPerp;
 		Vector2 frictionDirection = Vector2Normalize(FgPara) * -1;
+
+		frictionMagnitude = Clamp(frictionMagnitude, 0.0f, Vector2Length(FgPara)); // friction cant be more than FgPara
 
 		Vector2 Ffriction = frictionDirection * frictionMagnitude;
 
@@ -297,7 +310,10 @@ void cleanup() {
 		{
 			auto iterator = (world.objekts.begin() + i);
 			FizziksObjekt* pointerToFizziksObjekt = *iterator;
-			delete pointerToFizziksObjekt;
+			// Only delete if world owns the object
+			if (pointerToFizziksObjekt->ownedByWorld) {
+				delete pointerToFizziksObjekt;
+			}
 
 			world.objekts.erase(iterator);
 			i--;
@@ -320,7 +336,7 @@ void update()
 		newBird->position = { startX, startY };
 		newBird->velocity = { speed * (float)cos(angle * DEG2RAD), -speed * (float)sin(angle * DEG2RAD) };
 
-		world.add(newBird);
+		world.add(newBird, true);
 	}
 
 	
@@ -361,7 +377,7 @@ void draw()
 	halfspace.setRotationDegrees(halfspaceRotation);
 
 	//control for friction
-	GuiSliderBar(Rectangle{ 700, 150, 400, 20 }, "u", TextFormat("Y: %.2f", coefficientOfFriction), &coefficientOfFriction, 0, 1);
+	//GuiSliderBar(Rectangle{ 700, 150, 400, 20 }, "u", TextFormat("Y: %.2f", coefficientOfFriction), &coefficientOfFriction, 0, 1);
 
 
 	for (int i = 0; i < world.objekts.size(); i++) {
@@ -396,15 +412,45 @@ void draw()
 }
 int main()
 {
+
 	InitWindow(InitialWidth, InitialHeight, "Mactavish Carney 101534351 GAME2005");
 	SetTargetFPS(TARGET_FPS);
 	halfspace.isStatic = true;
 	halfspace.position = { 500, 700 };
 	world.add(&halfspace);
+
 	/*halfspace2.isStatic = true;
 	halfspace2.position = { 200, 400 };
 	halfspace2.setRotationDegrees(10);
 	world.add(&halfspace2);*/
+
+	rCircle->mass = 2;
+	rCircle->coefficientOfFriction = 0.1;
+	rCircle->color = RED;
+	rCircle->baseColor = RED;
+	rCircle->position = { 100, 500 };
+	world.add(rCircle, true);
+
+	gCircle->mass = 2;
+	gCircle->coefficientOfFriction = 0.8;
+	gCircle->color = GREEN;
+	gCircle->baseColor = GREEN;
+	gCircle->position = { 200, 500 };
+	world.add(gCircle, true);
+
+	bCircle->mass = 8;
+	bCircle->coefficientOfFriction = 0.1;
+	bCircle->color = BLUE;
+	bCircle->baseColor = BLUE;
+	bCircle->position = { 300, 500 };
+	world.add(bCircle, true);
+
+	yCircle->mass = 8;
+	yCircle->coefficientOfFriction = 0.8;
+	yCircle->color = YELLOW;
+	yCircle->baseColor = YELLOW;
+	yCircle->position = { 400, 500 };
+	world.add(yCircle, true);
 
 	while (!WindowShouldClose())
 	{
