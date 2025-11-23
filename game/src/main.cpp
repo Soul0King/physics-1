@@ -34,8 +34,6 @@ public:
 	Color color = GREEN;
 	Color baseColor = GREEN;
 
-	bool ownedByWorld = false;
-
 	virtual void draw() {
 		DrawCircle(position.x, position.y, 2, color);
 	}
@@ -109,9 +107,7 @@ public:
 
 	Vector2 accelerationGravity = { 0, 9 };
 
-	void add(FizziksObjekt* newObject, bool takeOwnership = false) {
-		if (newObject == nullptr) return;
-		newObject->ownedByWorld = takeOwnership;
+	void add(FizziksObjekt* newObject) {
 		objekts.push_back(newObject);
 	}
 
@@ -149,7 +145,6 @@ public:
 			//accel = deltaV / time (change in velocity over time) therefore     deltaV = accel * time
 			objekt->velocity = objekt->velocity + acceleration * dt;
 
-			//DrawLineEx(objekt->position, objekt->position + objekt->netForce, 1, GRAY);
 		}
 	}
 
@@ -253,10 +248,7 @@ bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace) 
 	Vector2 vectorProjection = halfspace->getNormal() * dot;
 
 
-	//DrawLineEx(circle->position, circle->position - vectorProjection, 1, GRAY);
-
 	Vector2 midpoint = circle->position - vectorProjection * 0.5f;
-	//DrawText(TextFormat("D: %6.0f", dot), midpoint.x, midpoint.y, 30, GRAY);
 
 	float overlap = circle->radius - dot;
 
@@ -285,7 +277,7 @@ bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace) 
 		Vector2 FgPara = Fgravity - FgPerp;
 		Vector2 frictionDirection = Vector2Normalize(FgPara) * -1;
 
-		frictionMagnitude = Clamp(frictionMagnitude, 0.0f, Vector2Length(FgPara)); // friction cant be more than FgPara
+		frictionMagnitude = Clamp(frictionMagnitude, 0.0f, Vector2Length(FgPara)); // frictionMagnitude cant be more than FgPara
 
 		Vector2 Ffriction = frictionDirection * frictionMagnitude;
 
@@ -310,10 +302,7 @@ void cleanup() {
 		{
 			auto iterator = (world.objekts.begin() + i);
 			FizziksObjekt* pointerToFizziksObjekt = *iterator;
-			// Only delete if world owns the object
-			if (pointerToFizziksObjekt->ownedByWorld) {
-				delete pointerToFizziksObjekt;
-			}
+			delete pointerToFizziksObjekt;
 
 			world.objekts.erase(iterator);
 			i--;
@@ -336,7 +325,7 @@ void update()
 		newBird->position = { startX, startY };
 		newBird->velocity = { speed * (float)cos(angle * DEG2RAD), -speed * (float)sin(angle * DEG2RAD) };
 
-		world.add(newBird, true);
+		world.add(newBird);
 	}
 
 	
@@ -385,28 +374,6 @@ void draw()
 	}
 
 
-	////FBD draw
-	//Vector2 Location = { 500, 500 };
-
-	//DrawCircleLines(Location.x, Location.y, 100, WHITE);
-	//float mass = 8;
-
-	////draw gravity
-	//Vector2 Fgravity = world.accelerationGravity * mass;
-	//DrawLine(Location.x, Location.y, Location.x + Fgravity.x, Location.y + Fgravity.y, PURPLE);
-
-	////draw normal force
-	//Vector2 FgPerp = halfspace.getNormal() * Vector2DotProduct(Fgravity, halfspace.getNormal());
-	//Vector2 Fnormal = FgPerp * -1;
-	//DrawLine(Location.x, Location.y, Location.x + Fnormal.x, Location.y + Fnormal.y, GREEN);
-
-	////draw friction
-	//Vector2 FgPara = Fgravity - FgPerp;
-	//Vector2 Ffriction = FgPara * -1;
-	//DrawLine(Location.x, Location.y, Location.x + Ffriction.x, Location.y + Ffriction.y, ORANGE);
-
-
-
 	EndDrawing();
 
 }
@@ -419,38 +386,33 @@ int main()
 	halfspace.position = { 500, 700 };
 	world.add(&halfspace);
 
-	/*halfspace2.isStatic = true;
-	halfspace2.position = { 200, 400 };
-	halfspace2.setRotationDegrees(10);
-	world.add(&halfspace2);*/
-
 	rCircle->mass = 2;
 	rCircle->coefficientOfFriction = 0.1;
 	rCircle->color = RED;
 	rCircle->baseColor = RED;
 	rCircle->position = { 100, 500 };
-	world.add(rCircle, true);
+	world.add(rCircle);
 
 	gCircle->mass = 2;
 	gCircle->coefficientOfFriction = 0.8;
 	gCircle->color = GREEN;
 	gCircle->baseColor = GREEN;
 	gCircle->position = { 200, 500 };
-	world.add(gCircle, true);
+	world.add(gCircle);
 
 	bCircle->mass = 8;
 	bCircle->coefficientOfFriction = 0.1;
 	bCircle->color = BLUE;
 	bCircle->baseColor = BLUE;
 	bCircle->position = { 300, 500 };
-	world.add(bCircle, true);
+	world.add(bCircle);
 
 	yCircle->mass = 8;
 	yCircle->coefficientOfFriction = 0.8;
 	yCircle->color = YELLOW;
 	yCircle->baseColor = YELLOW;
 	yCircle->position = { 400, 500 };
-	world.add(yCircle, true);
+	world.add(yCircle);
 
 	while (!WindowShouldClose())
 	{
