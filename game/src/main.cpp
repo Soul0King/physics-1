@@ -234,6 +234,21 @@ bool CircleCircleOverlap(FizziksCircle* circleA, FizziksCircle* circleB) {
 
 		circleA->position -= mtv * 0.5f;
 		circleB->position += mtv * 0.5f;
+
+		//from perspective of A
+		Vector2 velocityBRelativeToA = circleB->velocity - circleA->velocity;
+		float closingVelocity1D = Vector2DotProduct(velocityBRelativeToA, normalAToB);
+		//if dot is negative then we are coliding. if positive, not colliding
+		if (closingVelocity1D >= 0) return true;
+
+		float restitution = 1.0f;
+
+		float totalMass = circleA->mass + circleB->mass;
+		float impulseMagnitude = ((1.0f + restitution) * closingVelocity1D * circleA->mass * circleB->mass) / totalMass;
+		//A-->  <-B 
+		Vector2 impulseForB = normalAToB * -impulseMagnitude;
+		Vector2 impulseForA = normalAToB * impulseMagnitude;
+
 		return true;
 	}
 	else
