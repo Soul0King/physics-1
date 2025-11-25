@@ -15,6 +15,8 @@ const unsigned int TARGET_FPS = 50;
 float dt = 1.0f / TARGET_FPS;
 float time = 0;
 
+float restitution = 0.9f;
+
 
 enum FizziksShape {
 	CIRCLE,
@@ -29,6 +31,8 @@ public:
 	Vector2 velocity = { 0,0 };
 	float mass = 1; // in kg
 	Vector2 netForce = { 0,0 };
+
+	float bounciness = 0.9f; // for determining coefficient of restitution
 
 	std::string name = "objekt";
 	Color color = GREEN;
@@ -105,7 +109,7 @@ class FizziksWorld {
 public: 
 	std::vector<FizziksObjekt*> objekts;
 
-	Vector2 accelerationGravity = { 0, 9 };
+	Vector2 accelerationGravity = { 0, 50 };
 
 	void add(FizziksObjekt* newObject) {
 		objekts.push_back(newObject);
@@ -241,13 +245,17 @@ bool CircleCircleOverlap(FizziksCircle* circleA, FizziksCircle* circleB) {
 		//if dot is negative then we are coliding. if positive, not colliding
 		if (closingVelocity1D >= 0) return true;
 
-		float restitution = 1.0f;
+		float restitution = circleA->bounciness * circleB->bounciness;
 
 		float totalMass = circleA->mass + circleB->mass;
 		float impulseMagnitude = ((1.0f + restitution) * closingVelocity1D * circleA->mass * circleB->mass) / totalMass;
 		//A-->  <-B 
-		Vector2 impulseForB = normalAToB * -impulseMagnitude;
 		Vector2 impulseForA = normalAToB * impulseMagnitude;
+		Vector2 impulseForB = normalAToB * -impulseMagnitude;
+
+		//apply impulse
+		circleA->velocity += impulseForA / circleA->mass;
+		circleB->velocity += impulseForB / circleB->mass;
 
 		return true;
 	}
@@ -298,6 +306,21 @@ bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace) 
 
 		circle->netForce += Ffriction;
 		DrawLineEx(circle->position, circle->position + Ffriction, 2, ORANGE);
+
+
+		//Bouncing!
+		//from perspective of A
+		//Vector2 velocityBRelativeToA = circleB->velocity - circleA->velocity;
+		float closingVelocity1D = Vector2DotProduct(circle->velocity, halfspace->getNormal());
+		//if dot is negative then we are coliding. if positive, not colliding
+		if (closingVelocity1D >= 0) return true;
+
+		float restitution = circle->bounciness * halfspace->bounciness;
+		//velFinal = velInitial + -(1 + resitiution * velInitial)
+		circle->velocity += halfspace->getNormal() * closingVelocity1D * -(1.0f + restitution);
+		
+
+
 		return true;
 	}
 	else return false;
@@ -339,6 +362,7 @@ void update()
 		FizziksCircle* newBird = new FizziksCircle();
 		newBird->position = { startX, startY };
 		newBird->velocity = { speed * (float)cos(angle * DEG2RAD), -speed * (float)sin(angle * DEG2RAD) };
+		newBird->bounciness = restitution;
 
 		world.add(newBird);
 	}
@@ -383,6 +407,9 @@ void draw()
 	//control for friction
 	//GuiSliderBar(Rectangle{ 700, 150, 400, 20 }, "u", TextFormat("Y: %.2f", coefficientOfFriction), &coefficientOfFriction, 0, 1);
 
+	//control fo restitution
+	GuiSliderBar(Rectangle{ 700, 150, 400, 20 }, "restitution", TextFormat("Y: %.2f", restitution), &restitution, 0, 1);
+
 
 	for (int i = 0; i < world.objekts.size(); i++) {
 		world.objekts[i]->draw();
@@ -401,7 +428,7 @@ int main()
 	halfspace.position = { 500, 700 };
 	world.add(&halfspace);
 
-	rCircle->mass = 2;
+	/*rCircle->mass = 2;
 	rCircle->coefficientOfFriction = 0.1;
 	rCircle->color = RED;
 	rCircle->baseColor = RED;
@@ -413,20 +440,24 @@ int main()
 	gCircle->color = GREEN;
 	gCircle->baseColor = GREEN;
 	gCircle->position = { 200, 500 };
-	world.add(gCircle);
+	world.add(gCircle);*/
 
-	bCircle->mass = 8;
+	bCircle->mass = 100;
+	bCircle->radius = 30;
 	bCircle->coefficientOfFriction = 0.1;
 	bCircle->color = BLUE;
 	bCircle->baseColor = BLUE;
-	bCircle->position = { 300, 500 };
+	bCircle->position = { 400, 550 };
+	bCircle->velocity = { 100, 0 };
 	world.add(bCircle);
 
-	yCircle->mass = 8;
+	yCircle->mass = 0.1;
+	yCircle->radius = 30;
 	yCircle->coefficientOfFriction = 0.8;
 	yCircle->color = YELLOW;
 	yCircle->baseColor = YELLOW;
-	yCircle->position = { 400, 500 };
+	yCircle->position = { 800, 550 };
+	yCircle->velocity = { 0, 0 };
 	world.add(yCircle);
 
 	while (!WindowShouldClose())
