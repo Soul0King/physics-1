@@ -236,7 +236,7 @@ FizziksHalfspace halfspace;
 
 void MakeDeleteableObjekts() {
 	
-	FizziksCircle* rCircle = new FizziksCircle();
+	/*FizziksCircle* rCircle = new FizziksCircle();
 	FizziksCircle* gCircle = new FizziksCircle();
 	FizziksCircle* bCircle = new FizziksCircle();
 	FizziksCircle* yCircle = new FizziksCircle();
@@ -289,7 +289,7 @@ void MakeDeleteableObjekts() {
 	yCircle->baseColor = YELLOW;
 	yCircle->position = { 800, 680 };
 	yCircle->velocity = { 0, 0 };
-	world.add(yCircle);
+	world.add(yCircle);*/
 }
 
 
