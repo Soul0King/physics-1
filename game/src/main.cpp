@@ -501,20 +501,20 @@ void draw()
 	//control for restitution
 	GuiSliderBar(Rectangle{ 100, 150, 400, 20 }, "restitution", TextFormat("R: %.2f", restitution), &restitution, 0, 1);
 
-	// LE7 controls
-	GuiSliderBar(Rectangle{ 100, 170, 400, 20 }, "Red Circle Mass", TextFormat("M: %.0f", rCircleMass), &rCircleMass, 1, 50);
-	GuiSliderBar(Rectangle{ 700, 170, 400, 20 }, "Red Circle Speed", TextFormat("M: %.0f", rCircleSpeed), &rCircleSpeed, 0, 1000);
+	//// LE7 controls
+	//GuiSliderBar(Rectangle{ 100, 170, 400, 20 }, "Red Circle Mass", TextFormat("M: %.0f", rCircleMass), &rCircleMass, 1, 50);
+	//GuiSliderBar(Rectangle{ 700, 170, 400, 20 }, "Red Circle Speed", TextFormat("M: %.0f", rCircleSpeed), &rCircleSpeed, 0, 1000);
 
-	GuiSliderBar(Rectangle{ 100, 190, 400, 20 }, "green Circle Mass", TextFormat("M: %.0f", gCircleMass), &gCircleMass, 1, 50);
-	GuiSliderBar(Rectangle{ 700, 190, 400, 20 }, "green Circle Speed", TextFormat("M: %.0f", gCircleSpeed), &gCircleSpeed, 0, 1000);
+	//GuiSliderBar(Rectangle{ 100, 190, 400, 20 }, "green Circle Mass", TextFormat("M: %.0f", gCircleMass), &gCircleMass, 1, 50);
+	//GuiSliderBar(Rectangle{ 700, 190, 400, 20 }, "green Circle Speed", TextFormat("M: %.0f", gCircleSpeed), &gCircleSpeed, 0, 1000);
 
-	GuiSliderBar(Rectangle{ 100, 210, 400, 20 }, "blue Circle Mass", TextFormat("M: %.0f", bCircleMass), &bCircleMass, 1, 50);
-	GuiSliderBar(Rectangle{ 700, 210, 400, 20 }, "blue Circle Speed", TextFormat("M: %.0f", bCircleSpeed), &bCircleSpeed, 0, 1000);
+	//GuiSliderBar(Rectangle{ 100, 210, 400, 20 }, "blue Circle Mass", TextFormat("M: %.0f", bCircleMass), &bCircleMass, 1, 50);
+	//GuiSliderBar(Rectangle{ 700, 210, 400, 20 }, "blue Circle Speed", TextFormat("M: %.0f", bCircleSpeed), &bCircleSpeed, 0, 1000);
 
-	GuiSliderBar(Rectangle{ 100, 230, 400, 20 }, "purple Circle Mass", TextFormat("M: %.0f", pCircleMass), &pCircleMass, 1, 50);
-	GuiSliderBar(Rectangle{ 700, 230, 400, 20 }, "purple Circle Speed", TextFormat("M: %.0f", pCircleSpeed), &pCircleSpeed, 0, 1000);
+	//GuiSliderBar(Rectangle{ 100, 230, 400, 20 }, "purple Circle Mass", TextFormat("M: %.0f", pCircleMass), &pCircleMass, 1, 50);
+	//GuiSliderBar(Rectangle{ 700, 230, 400, 20 }, "purple Circle Speed", TextFormat("M: %.0f", pCircleSpeed), &pCircleSpeed, 0, 1000);
 
-	GuiSliderBar(Rectangle{ 100, 250, 400, 20 }, "yellow Circle Mass", TextFormat("M: %.0f", yCircleMass), &yCircleMass, 1, 50);
+	//GuiSliderBar(Rectangle{ 100, 250, 400, 20 }, "yellow Circle Mass", TextFormat("M: %.0f", yCircleMass), &yCircleMass, 1, 50);
 	
 
 

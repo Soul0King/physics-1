@@ -22,6 +22,10 @@ Use this as a starting point or replace it with your code.
 
 */
 
+//desktop
+//static constexpr int InitialWidth = 1200;
+//static constexpr int InitialHeight = 800;
 
+//laptop
 static constexpr int InitialWidth = 1200;
-static constexpr int InitialHeight = 800;
+static constexpr int InitialHeight = 750;
