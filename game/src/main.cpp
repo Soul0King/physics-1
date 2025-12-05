@@ -17,30 +17,31 @@ float time = 0;
 
 float restitution = 0.9f;
 
-// LE7 slider variables
-float rCircleMass = 1;
-float rCircleSpeed = 1;
-Vector2 rCircleNormal = { 0, 1 };
-
-float gCircleMass = 1;
-float gCircleSpeed = 1;
-Vector2 gCircleNormal = { 0, 1 };
-
-float bCircleMass = 1;
-float bCircleSpeed = 100;
-Vector2 bCircleNormal = { 1, 0 };
-
-float pCircleMass = 1;
-float pCircleSpeed = 1;
-Vector2 pCircleNormal = { 0, 1 };
-
-float yCircleMass = 1;
-float yCircleSpeed = 1;
+//// LE7 slider variables
+//float rCircleMass = 1;
+//float rCircleSpeed = 1;
+//Vector2 rCircleNormal = { 0, 1 };
+//
+//float gCircleMass = 1;
+//float gCircleSpeed = 1;
+//Vector2 gCircleNormal = { 0, 1 };
+//
+//float bCircleMass = 1;
+//float bCircleSpeed = 100;
+//Vector2 bCircleNormal = { 1, 0 };
+//
+//float pCircleMass = 1;
+//float pCircleSpeed = 1;
+//Vector2 pCircleNormal = { 0, 1 };
+//
+//float yCircleMass = 1;
+//float yCircleSpeed = 1;
 
 
 enum FizziksShape {
 	CIRCLE,
-	HALF_SPACE
+	HALF_SPACE,
+	AABB
 };
 
 class FizziksObjekt {
@@ -118,6 +119,22 @@ public:
 	FizziksShape Shape() override
 	{
 		return HALF_SPACE;
+	}
+};
+
+class FizziksAABB : public FizziksObjekt {
+public:
+	Vector2 sizeXY = { 0,0 };
+
+	void draw() override {
+		DrawRectangle(position.x, position.y, sizeXY.x, sizeXY.y, color);
+		DrawLineEx(position, position + velocity, 1, color);
+	}
+
+	// Inherited via FizziksObjekt
+	FizziksShape Shape() override
+	{
+		return AABB;
 	}
 };
 
