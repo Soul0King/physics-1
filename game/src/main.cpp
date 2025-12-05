@@ -10,32 +10,13 @@ See documentation here: https://www.raylib.com/, and examples here: https://www.
 #include "game.h"
 #include <string>
 #include <vector>
+#include <cmath>
 
 const unsigned int TARGET_FPS = 50;
 float dt = 1.0f / TARGET_FPS;
 float time = 0;
 
 float restitution = 0.9f;
-
-//// LE7 slider variables
-//float rCircleMass = 1;
-//float rCircleSpeed = 1;
-//Vector2 rCircleNormal = { 0, 1 };
-//
-//float gCircleMass = 1;
-//float gCircleSpeed = 1;
-//Vector2 gCircleNormal = { 0, 1 };
-//
-//float bCircleMass = 1;
-//float bCircleSpeed = 100;
-//Vector2 bCircleNormal = { 1, 0 };
-//
-//float pCircleMass = 1;
-//float pCircleSpeed = 1;
-//Vector2 pCircleNormal = { 0, 1 };
-//
-//float yCircleMass = 1;
-//float yCircleSpeed = 1;
 
 
 enum FizziksShape {
@@ -124,11 +105,12 @@ public:
 
 class FizziksAABB : public FizziksObjekt {
 public:
-	Vector2 sizeXY = { 0,0 };
-
+	Vector2 sizeXY = { 10,10 };
+	Vector2 maxCoords = { position.x + sizeXY.x, position.y + sizeXY.y };
+	
 	void draw() override {
 		DrawRectangle(position.x, position.y, sizeXY.x, sizeXY.y, color);
-		DrawLineEx(position, position + velocity, 1, color);
+		//DrawLineEx(position, position + velocity, 1, color);
 	}
 
 	// Inherited via FizziksObjekt
@@ -140,10 +122,12 @@ public:
 
 bool CircleCircleOverlap(FizziksCircle* circleA, FizziksCircle* circleB);
 bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace);
-
+bool AABBAABBOverlap(FizziksAABB* aabbA, FizziksAABB* aabbB);
+bool AABBCircleOverlap(FizziksAABB* aabb, FizziksCircle* circle);
+bool AABBHalfspaceOverlap(FizziksAABB* aabb, FizziksHalfspace* halfspace);
 
 class FizziksWorld {
-public: 
+public:
 	std::vector<FizziksObjekt*> objekts;
 
 	Vector2 accelerationGravity = { 0, 50 };
@@ -181,7 +165,7 @@ public:
 			//vel = change in position / time, therefore     change in position = vel * time 
 			objekt->position = objekt->position + objekt->velocity * dt;
 
-			Vector2 acceleration = objekt->netForce/objekt->mass; //a = F/m
+			Vector2 acceleration = objekt->netForce / objekt->mass; //a = F/m
 
 			//accel = deltaV / time (change in velocity over time) therefore     deltaV = accel * time
 			objekt->velocity = objekt->velocity + acceleration * dt;
@@ -191,13 +175,14 @@ public:
 
 	// update state of all phiysics objects
 	void update() {
+		applyKinematics();
+
 		resetNetForces();
 
 		addGravityForces();
 
 		checkCollisions();
 
-		applyKinematics();
 	}
 
 	void checkCollisions() {
@@ -231,7 +216,38 @@ public:
 						isColliding[j] = true;
 					}
 				}
-
+				else if (shapeOfA == AABB && shapeOfB == AABB) {
+					if (AABBAABBOverlap((FizziksAABB*)objektPointerA, (FizziksAABB*)objektPointerB)) {
+						isColliding[i] = true;
+						isColliding[j] = true;
+					}
+				}
+				// NEW: circle-aabb in either order
+				else if (shapeOfA == AABB && shapeOfB == CIRCLE) {
+					if (AABBCircleOverlap((FizziksAABB*)objektPointerA, (FizziksCircle*)objektPointerB)) {
+						isColliding[i] = true;
+						isColliding[j] = true;
+					}
+				}
+				else if (shapeOfA == CIRCLE && shapeOfB == AABB) {
+					if (AABBCircleOverlap((FizziksAABB*)objektPointerB, (FizziksCircle*)objektPointerA)) {
+						isColliding[i] = true;
+						isColliding[j] = true;
+					}
+				}
+				// NEW: AABB - halfspace collisions
+				else if (shapeOfA == AABB && shapeOfB == HALF_SPACE) {
+					if (AABBHalfspaceOverlap((FizziksAABB*)objektPointerA, (FizziksHalfspace*)objektPointerB)) {
+						isColliding[i] = true;
+						isColliding[j] = true;
+					}
+				}
+				else if (shapeOfA == HALF_SPACE && shapeOfB == AABB) {
+					if (AABBHalfspaceOverlap((FizziksAABB*)objektPointerB, (FizziksHalfspace*)objektPointerA)) {
+						isColliding[i] = true;
+						isColliding[j] = true;
+					}
+				}
 			}
 		}
 		
@@ -253,60 +269,33 @@ FizziksHalfspace halfspace;
 
 void MakeDeleteableObjekts() {
 	
-	/*FizziksCircle* rCircle = new FizziksCircle();
-	FizziksCircle* gCircle = new FizziksCircle();
-	FizziksCircle* bCircle = new FizziksCircle();
-	FizziksCircle* yCircle = new FizziksCircle();
-	FizziksCircle* pCircle = new FizziksCircle();
+	FizziksAABB* aabb = new FizziksAABB();
+	FizziksAABB* aabb1 = new FizziksAABB();
+	FizziksAABB* aabb2 = new FizziksAABB();
 
-	rCircle->mass = rCircleMass;
-	rCircle->bounciness = restitution;
-	rCircle->radius = 20;
-	rCircle->coefficientOfFriction = 0.1;
-	rCircle->color = RED;
-	rCircle->baseColor = RED;
-	rCircle->position = { 100, 500 };
-	rCircle->velocity = rCircleNormal * rCircleSpeed;
-	world.add(rCircle);
+	aabb->position = { 400, 600 };
+	aabb->sizeXY = { 150, 50 };
+	aabb->velocity = { 0, 0 };
+	aabb->color = GREEN;
+	aabb->baseColor = GREEN;
+	aabb->isStatic = true;
+	world.add(aabb);
 
-	pCircle->mass = pCircleMass;
-	pCircle->bounciness = restitution;
-	pCircle->radius = 20;
-	pCircle->coefficientOfFriction = 0.1;
-	pCircle->color = PURPLE;
-	pCircle->baseColor = PURPLE;
-	pCircle->position = { 100, 480 };
-	pCircle->velocity = pCircleNormal * pCircleSpeed;
-	world.add(pCircle);
+	aabb1->position = { 450, 400 };
+	aabb1->sizeXY = { 50, 100 };
+	aabb1->velocity = { 0, 0 };
+	aabb1->color = BLUE;
+	aabb1->baseColor = BLUE;
+	world.add(aabb1);
 
-	gCircle->mass = gCircleMass;
-	gCircle->bounciness = restitution;
-	gCircle->coefficientOfFriction = 0.8;
-	gCircle->color = GREEN;
-	gCircle->baseColor = GREEN;
-	gCircle->position = { 200, 500 };
-	gCircle->velocity = gCircleNormal * gCircleSpeed;
-	world.add(gCircle);
+	aabb2->position = { 400, 200 };
+	aabb2->sizeXY = { 150, 150 };
+	aabb2->velocity = { 0, 0 };
+	aabb2->color = YELLOW;
+	aabb2->baseColor = YELLOW;
+	world.add(aabb2);
 
-	bCircle->mass = bCircleMass;
-	bCircle->bounciness = restitution;
-	bCircle->radius = 20;
-	bCircle->coefficientOfFriction = 0.1;
-	bCircle->color = BLUE;
-	bCircle->baseColor = BLUE;
-	bCircle->position = { 600, 680 };
-	bCircle->velocity = bCircleNormal * bCircleSpeed;
-	world.add(bCircle);
 
-	yCircle->mass = yCircleMass;
-	yCircle->bounciness = restitution;
-	yCircle->radius = 20;
-	yCircle->coefficientOfFriction = 0.8;
-	yCircle->color = YELLOW;
-	yCircle->baseColor = YELLOW;
-	yCircle->position = { 800, 680 };
-	yCircle->velocity = { 0, 0 };
-	world.add(yCircle);*/
 }
 
 
@@ -417,6 +406,223 @@ bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace) 
 	else return false;
 }
 
+
+bool AABBAABBOverlap(FizziksAABB* aabbA, FizziksAABB* aabbB) {
+	// compute centers (position is top-left in DrawRectangle)
+	Vector2 cA = { aabbA->position.x + aabbA->sizeXY.x * 0.5f, aabbA->position.y + aabbA->sizeXY.y * 0.5f };
+	Vector2 cB = { aabbB->position.x + aabbB->sizeXY.x * 0.5f, aabbB->position.y + aabbB->sizeXY.y * 0.5f };
+
+	float halfWidthA = aabbA->sizeXY.x * 0.5f;
+	float halfWidthB = aabbB->sizeXY.x * 0.5f;
+	float halfHeightA = aabbA->sizeXY.y * 0.5f;
+	float halfHeightB = aabbB->sizeXY.y * 0.5f;
+
+	Vector2 d = { cB.x - cA.x, cB.y - cA.y };
+
+	float overlapX = (halfWidthA + halfWidthB) - fabsf(d.x);
+	float overlapY = (halfHeightA + halfHeightB) - fabsf(d.y);
+
+	if (overlapX > 0.0f && overlapY > 0.0f) {
+		// choose the smaller overlap to separate along that axis
+		bool separateOnX = overlapX < overlapY;
+
+		if (separateOnX) {
+			float sign = (d.x >= 0.0f) ? 1.0f : -1.0f;
+			float push = overlapX * sign; // how much to move B relative to A along X
+
+			// If one is static move the other fully; otherwise split equally
+			if (aabbA->isStatic && !aabbB->isStatic) {
+				aabbB->position.x += push;
+			}
+			else if (!aabbA->isStatic && aabbB->isStatic) {
+				aabbA->position.x -= push;
+			}
+			else {
+				aabbA->position.x -= push * 0.5f;
+				aabbB->position.x += push * 0.5f;
+			}
+
+			// correct velocities to avoid re-penetration:
+			// If colliding with a static object, zero the velocity along collision axis.
+			if (aabbA->isStatic && !aabbB->isStatic) {
+				aabbB->velocity.x = 0.0f;
+			}
+			else if (!aabbA->isStatic && aabbB->isStatic) {
+				aabbA->velocity.x = 0.0f;
+			}
+			else {
+				// both movable -> simple separation; optionally reflect velocities or do impulses
+				float vxA = aabbA->velocity.x;
+				float vxB = aabbB->velocity.x;
+				// simple exchange (elastic-ish) — tweak as desired:
+				aabbA->velocity.x = vxB;
+				aabbB->velocity.x = vxA;
+			}
+			
+		}
+		else {
+			float sign = (d.y >= 0.0f) ? 1.0f : -1.0f;
+			float push = overlapY * sign; // how much to move B relative to A along Y
+
+			if (aabbA->isStatic && !aabbB->isStatic) {
+				aabbB->position.y += push;
+			}
+			else if (!aabbA->isStatic && aabbB->isStatic) {
+				aabbA->position.y -= push;
+			}
+			else {
+				aabbA->position.y -= push * 0.5f;
+				aabbB->position.y += push * 0.5f;
+			}
+			if (aabbA->isStatic && !aabbB->isStatic) {
+				aabbB->velocity.y = 0.0f;
+			}
+			else if (!aabbA->isStatic && aabbB->isStatic) {
+				aabbA->velocity.y = 0.0f;
+			}
+			else {
+				float vyA = aabbA->velocity.y;
+				float vyB = aabbB->velocity.y;
+				aabbA->velocity.y = vyB;
+				aabbB->velocity.y = vyA;
+			}
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+// New: AABB - Circle overlap + response
+bool AABBCircleOverlap(FizziksAABB* aabb, FizziksCircle* circle) {
+	// AABB min/max (top-left given by position)
+	Vector2 aMin = aabb->position;
+	Vector2 aMax = { aabb->position.x + aabb->sizeXY.x, aabb->position.y + aabb->sizeXY.y };
+
+	// Closest point on AABB to circle center
+	float closestX = fmaxf(aMin.x, fminf(circle->position.x, aMax.x));
+	float closestY = fmaxf(aMin.y, fminf(circle->position.y, aMax.y));
+	Vector2 closestPoint = { closestX, closestY };
+
+	Vector2 displacement = circle->position - closestPoint;
+	float dist = Vector2Length(displacement);
+	float overlap = circle->radius - dist;
+
+	if (overlap > 0.0f) {
+		// Determine normal from AABB to circle (from closestPoint to circle center)
+		Vector2 normal;
+		if (dist < 0.0001f) {
+			// Circle center is exactly on the closest point; pick an arbitrary normal
+			normal = { 0, -1 };
+		}
+		else {
+			normal = displacement / dist;
+		}
+
+		// Minimum translation vector
+		Vector2 mtv = normal * overlap;
+
+		// Separate objects depending on static flags
+		if (aabb->isStatic && !circle->isStatic) {
+			circle->position += mtv;
+		}
+		else if (!aabb->isStatic && circle->isStatic) {
+			aabb->position -= mtv;
+		}
+		else if (!aabb->isStatic && !circle->isStatic) {
+			// split separation
+			circle->position += mtv * 0.5f;
+			aabb->position -= mtv * 0.5f;
+		}
+		else {
+			// both static -> nothing
+		}
+
+		// Relative velocity along normal (from perspective of circle)
+		Vector2 relVel = circle->velocity - aabb->velocity;
+		float closingVel = Vector2DotProduct(relVel, normal);
+
+		// If they're separating or almost stationary along normal, still consider small negative thresholds
+		if (closingVel < 0.0f) {
+			float e = circle->bounciness * aabb->bounciness;
+			float totalMass = circle->mass + aabb->mass;
+			// impulse magnitude (simple 1D along normal)
+			float impulseMag = -(1.0f + e) * closingVel;
+			// distribute impulse by masses and static flags:
+			if (aabb->isStatic && !circle->isStatic) {
+				// instant velocity change for circle only
+				circle->velocity += normal * (impulseMag);
+			}
+			else if (!aabb->isStatic && circle->isStatic) {
+				aabb->velocity -= normal * (impulseMag);
+			}
+			else if (!aabb->isStatic && !circle->isStatic) {
+				// apply conservation style split
+				Vector2 impulseOnCircle = normal * (impulseMag * (aabb->mass / totalMass));
+				Vector2 impulseOnAABB = normal * (-impulseMag * (circle->mass / totalMass));
+				circle->velocity += impulseOnCircle / circle->mass;
+				aabb->velocity += impulseOnAABB / aabb->mass;
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
+
+// New: AABB - Halfspace overlap + response
+bool AABBHalfspaceOverlap(FizziksAABB* aabb, FizziksHalfspace* halfspace) {
+	// Build list of corners (top-left origin)
+	Vector2 corners[4];
+	corners[0] = aabb->position; // top-left
+	corners[1] = { aabb->position.x + aabb->sizeXY.x, aabb->position.y }; // top-right
+	corners[2] = { aabb->position.x, aabb->position.y + aabb->sizeXY.y }; // bottom-left
+	corners[3] = { aabb->position.x + aabb->sizeXY.x, aabb->position.y + aabb->sizeXY.y }; // bottom-right
+
+	Vector2 n = halfspace->getNormal();
+
+	// For penetration into the halfspace, find the minimum dot (most negative) among corners
+	float minDot = FLT_MAX;
+	for (int i = 0; i < 4; i++) {
+		float d = Vector2DotProduct(corners[i] - halfspace->position, n);
+		if (d < minDot) minDot = d;
+	}
+
+	// If minDot < 0, some corner is in the forbidden halfspace side (penetration)
+	if (minDot < 0.0f) {
+		float overlap = -minDot; // how far the AABB penetrates along normal
+
+		// move the AABB out along normal by overlap (unless static)
+		if (aabb->isStatic) {
+			// nothing to move if AABB is static; (halfspace assumed static)
+		}
+		else {
+			aabb->position += n * overlap;
+		}
+
+		//// Apply a simple normal impulse to the AABB velocity to reflect it
+		//float velAlongNormal = Vector2DotProduct(aabb->velocity, n);
+		//if (velAlongNormal < 0.0f) { // traveling into the plane
+		//	float e = aabb->bounciness * halfspace->bounciness;
+		//	aabb->velocity += n * (-(1.0f + e) * velAlongNormal);
+		//}
+
+		// add a simple normal force to cancel gravity penetration similar to circle case
+		if (!aabb->isStatic) {
+			Vector2 Fgravity = world.accelerationGravity * aabb->mass;
+			Vector2 FgPerp = n * Vector2DotProduct(Fgravity, n);
+			Vector2 Fnormal = FgPerp * -1;
+			aabb->netForce += Fnormal;
+			DrawLineEx(aabb->position, aabb->position + Fnormal, 1, GREEN);
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
 void cleanup() {
 
 	for (int i = 0; i < world.objekts.size(); i++) {
@@ -457,6 +663,16 @@ void update()
 
 		world.add(newBird);
 	}
+
+	if (IsKeyPressed(KEY_S))
+	{
+		FizziksAABB* newBird = new FizziksAABB();
+		newBird->position = { startX, startY };
+		newBird->velocity = { speed * (float)cos(angle * DEG2RAD), -speed * (float)sin(angle * DEG2RAD) };
+
+		world.add(newBird);
+	}
+
 	if (IsKeyPressed(KEY_R)) {
 		for (int i = 0; i < world.objekts.size(); i++) {
 
@@ -483,7 +699,7 @@ void draw()
 	BeginDrawing();
 	ClearBackground(BLACK);
 	DrawText("Mactavish Carney 101534351", 10, float(GetScreenHeight() - 25), 20, LIGHTGRAY);
-
+	
 
 
 	GuiSliderBar(Rectangle{ 100, 10, 800, 20 }, "", TextFormat("%.2f", time), &time, 0, 240);
@@ -517,21 +733,6 @@ void draw()
 
 	//control for restitution
 	GuiSliderBar(Rectangle{ 100, 150, 400, 20 }, "restitution", TextFormat("R: %.2f", restitution), &restitution, 0, 1);
-
-	//// LE7 controls
-	//GuiSliderBar(Rectangle{ 100, 170, 400, 20 }, "Red Circle Mass", TextFormat("M: %.0f", rCircleMass), &rCircleMass, 1, 50);
-	//GuiSliderBar(Rectangle{ 700, 170, 400, 20 }, "Red Circle Speed", TextFormat("M: %.0f", rCircleSpeed), &rCircleSpeed, 0, 1000);
-
-	//GuiSliderBar(Rectangle{ 100, 190, 400, 20 }, "green Circle Mass", TextFormat("M: %.0f", gCircleMass), &gCircleMass, 1, 50);
-	//GuiSliderBar(Rectangle{ 700, 190, 400, 20 }, "green Circle Speed", TextFormat("M: %.0f", gCircleSpeed), &gCircleSpeed, 0, 1000);
-
-	//GuiSliderBar(Rectangle{ 100, 210, 400, 20 }, "blue Circle Mass", TextFormat("M: %.0f", bCircleMass), &bCircleMass, 1, 50);
-	//GuiSliderBar(Rectangle{ 700, 210, 400, 20 }, "blue Circle Speed", TextFormat("M: %.0f", bCircleSpeed), &bCircleSpeed, 0, 1000);
-
-	//GuiSliderBar(Rectangle{ 100, 230, 400, 20 }, "purple Circle Mass", TextFormat("M: %.0f", pCircleMass), &pCircleMass, 1, 50);
-	//GuiSliderBar(Rectangle{ 700, 230, 400, 20 }, "purple Circle Speed", TextFormat("M: %.0f", pCircleSpeed), &pCircleSpeed, 0, 1000);
-
-	//GuiSliderBar(Rectangle{ 100, 250, 400, 20 }, "yellow Circle Mass", TextFormat("M: %.0f", yCircleMass), &yCircleMass, 1, 50);
 	
 
 
