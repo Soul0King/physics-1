@@ -17,7 +17,7 @@ float dt = 1.0f / TARGET_FPS;
 float time = 0;
 
 float restitution = 0.9f;
-
+float coefficientOfFriction = 1.0f;
 
 enum FizziksShape {
 	CIRCLE,
@@ -33,6 +33,7 @@ public:
 	Vector2 velocity = { 0,0 };
 	float mass = 1; // in kg
 	Vector2 netForce = { 0,0 };
+	float grippiness = 0.5f;
 
 	float bounciness = 0.9f; // for determining coefficient of restitution
 
@@ -53,7 +54,7 @@ class FizziksCircle : public FizziksObjekt {
 public:
 	float radius = 15; // circle radius in pixels
 
-	float coefficientOfFriction = 0.5f;
+	
 
 	void draw() override {
 		DrawCircle(position.x, position.y, radius, color);
@@ -167,13 +168,15 @@ public:
 	}
 
 	void update() {
-		applyKinematics();
+		
 
 		resetNetForces();
 
 		addGravityForces();
 
 		checkCollisions();
+
+		applyKinematics();
 
 	}
 
@@ -364,13 +367,23 @@ bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace) 
 
 		//friction
 		//f = uN
-		float u = circle->coefficientOfFriction;
+		float u = circle->grippiness * halfspace->grippiness;
 		float frictionMagnitude = u * Vector2Length(Fnormal);
 
 		Vector2 FgPara = Fgravity - FgPerp;
-		Vector2 frictionDirection = Vector2Normalize(FgPara) * -1;
 
-		frictionMagnitude = Clamp(frictionMagnitude, 0.0f, Vector2Length(FgPara)); // frictionMagnitude cant be more than FgPara
+		Vector2 frictionDirection;
+		if (FgPara.x > 0) {
+			frictionDirection = Vector2Normalize(FgPara) * -1;
+			frictionMagnitude = Clamp(frictionMagnitude, 0.0f, Vector2Length(FgPara)); // frictionMagnitude cant be more than FgPara
+		}
+		else {
+			frictionDirection = Vector2Normalize(circle->velocity) * -1;
+			frictionMagnitude = Clamp(frictionMagnitude, 0.0f, Vector2Length(circle->velocity));
+		}
+
+		
+		
 
 		Vector2 Ffriction = frictionDirection * frictionMagnitude;
 
@@ -622,6 +635,7 @@ void update()
 		newBird->position = { startX, startY };
 		newBird->velocity = { speed * (float)cos(angle * DEG2RAD), -speed * (float)sin(angle * DEG2RAD) };
 		newBird->bounciness = restitution;
+		newBird->grippiness = coefficientOfFriction;
 
 		world.add(newBird);
 	}
@@ -691,7 +705,7 @@ void draw()
 	halfspace.setRotationDegrees(halfspaceRotation);
 
 	//control for friction
-	//GuiSliderBar(Rectangle{ 700, 150, 400, 20 }, "u", TextFormat("Y: %.2f", coefficientOfFriction), &coefficientOfFriction, 0, 1);
+	GuiSliderBar(Rectangle{ 700, 150, 400, 20 }, "u", TextFormat("Y: %.2f", coefficientOfFriction), &coefficientOfFriction, 0, 1);
 
 	//control for restitution
 	GuiSliderBar(Rectangle{ 100, 150, 400, 20 }, "restitution", TextFormat("R: %.2f", restitution), &restitution, 0, 1);
