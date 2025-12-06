@@ -53,8 +53,7 @@ public:
 class FizziksCircle : public FizziksObjekt {
 public:
 	float radius = 15; // circle radius in pixels
-
-	
+	std::string tag = "pig";
 
 	void draw() override {
 		DrawCircle(position.x, position.y, radius, color);
@@ -66,6 +65,7 @@ public:
 		return CIRCLE;
 	}
 };
+
 
 class FizziksHalfspace : public FizziksObjekt {
 private:
@@ -265,28 +265,87 @@ void MakeDeleteableObjekts() {
 	FizziksAABB* aabb = new FizziksAABB();
 	FizziksAABB* aabb1 = new FizziksAABB();
 	FizziksAABB* aabb2 = new FizziksAABB();
+	FizziksAABB* aabb3 = new FizziksAABB();
+	FizziksAABB* aabb4 = new FizziksAABB();
+	FizziksAABB* aabb5 = new FizziksAABB();
+	FizziksAABB* aabb6 = new FizziksAABB();
+	FizziksAABB* aabb7 = new FizziksAABB();
 
-	aabb->position = { 400, 600 };
-	aabb->sizeXY = { 150, 50 };
+	FizziksCircle* c1 = new FizziksCircle();
+	c1->position = { 550, 635 };
+	world.add(c1);
+
+	FizziksCircle* c2 = new FizziksCircle();
+	c2->position = { 750, 635 };
+	world.add(c2);
+
+	FizziksCircle* c3 = new FizziksCircle();
+	c3->position = { 650, 285 };
+	world.add(c3);
+
+	aabb->position = { 0, 650 };
+	aabb->sizeXY = { 2000, 50 };
 	aabb->velocity = { 0, 0 };
-	aabb->color = GREEN;
-	aabb->baseColor = GREEN;
+	aabb->color = BLUE;
+	aabb->baseColor = BLUE;
 	aabb->isStatic = true;
 	world.add(aabb);
 
-	aabb1->position = { 450, 400 };
+	aabb1->position = { 450, 550 };
 	aabb1->sizeXY = { 50, 100 };
 	aabb1->velocity = { 0, 0 };
-	aabb1->color = BLUE;
-	aabb1->baseColor = BLUE;
+	aabb1->color = GREEN;
+	aabb1->baseColor = GREEN;
+	aabb1->mass = 1;
 	world.add(aabb1);
 
-	aabb2->position = { 400, 200 };
-	aabb2->sizeXY = { 150, 150 };
+	aabb2->position = { 450, 450 };
+	aabb2->sizeXY = { 50, 100 };
 	aabb2->velocity = { 0, 0 };
 	aabb2->color = YELLOW;
 	aabb2->baseColor = YELLOW;
+	aabb2->mass = 1;
 	world.add(aabb2);
+
+	aabb3->position = { 450, 350 };
+	aabb3->sizeXY = { 50, 100 };
+	aabb3->velocity = { 0, 0 };
+	aabb3->color = ORANGE;
+	aabb3->baseColor = ORANGE;
+	aabb3->mass = 1;
+	world.add(aabb3);
+
+	aabb4->position = { 450, 300 };
+	aabb4->sizeXY = { 400, 50 };
+	aabb4->velocity = { 0, 0 };
+	aabb4->color = ORANGE;
+	aabb4->baseColor = ORANGE;
+	aabb4->mass = 1;
+	world.add(aabb4);
+
+	aabb5->position = { 800, 550 };
+	aabb5->sizeXY = { 50, 100 };
+	aabb5->velocity = { 0, 0 };
+	aabb5->color = GREEN;
+	aabb5->baseColor = GREEN;
+	aabb5->mass = 1;
+	world.add(aabb5);
+
+	aabb6->position = { 800, 450 };
+	aabb6->sizeXY = { 50, 100 };
+	aabb6->velocity = { 0, 0 };
+	aabb6->color = YELLOW;
+	aabb6->baseColor = YELLOW;
+	aabb6->mass = 1;
+	world.add(aabb6);
+
+	aabb7->position = { 800, 350 };
+	aabb7->sizeXY = { 50, 100 };
+	aabb7->velocity = { 0, 0 };
+	aabb7->color = ORANGE;
+	aabb7->baseColor = ORANGE;
+	aabb7->mass = 1;
+	world.add(aabb7);
 
 
 }
@@ -311,12 +370,13 @@ bool CircleCircleOverlap(FizziksCircle* circleA, FizziksCircle* circleB) {
 
 		circleA->position -= mtv * 0.5f;
 		circleB->position += mtv * 0.5f;
-
+		
 		//from perspective of A
 		Vector2 velocityBRelativeToA = circleB->velocity - circleA->velocity;
 		float closingVelocity1D = Vector2DotProduct(velocityBRelativeToA, normalAToB);
 		//if dot is negative then we are coliding. if positive, not colliding
 		if (closingVelocity1D >= 0) return true;
+		
 
 		float restitution = circleA->bounciness * circleB->bounciness;
 
@@ -423,64 +483,87 @@ bool AABBAABBOverlap(FizziksAABB* aabbA, FizziksAABB* aabbB) {
 	float overlapY = (halfHeightA + halfHeightB) - fabsf(d.y);
 
 	if (overlapX > 0.0f && overlapY > 0.0f) {
-		// choose the smaller overlap to separate along that axis
 		bool separateOnX = overlapX < overlapY;
 
 		if (separateOnX) {
 			float sign = (d.x >= 0.0f) ? 1.0f : -1.0f;
-			float push = overlapX * sign; 
+			float push = overlapX * sign;
 
-			// If one is static move the other fully otherwise split equally
-			if (aabbA->isStatic && !aabbB->isStatic) {
-				aabbB->position.x += push;
-			}
-			else if (!aabbA->isStatic && aabbB->isStatic) {
-				aabbA->position.x -= push;
-			}
-			else {
-				aabbA->position.x -= push * 0.5f;
-				aabbB->position.x += push * 0.5f;
-			}
+			// Separate objects
+			if (aabbA->isStatic && !aabbB->isStatic) aabbB->position.x += push;
+			else if (!aabbA->isStatic && aabbB->isStatic) aabbA->position.x -= push;
+			else { aabbA->position.x -= push * 0.5f; aabbB->position.x += push * 0.5f; }
 
-			if (aabbA->isStatic && !aabbB->isStatic) {
-				aabbB->velocity.x = 0.0f;
-			}
-			else if (!aabbA->isStatic && aabbB->isStatic) {
-				aabbA->velocity.x = 0.0f;
-			}
-			else {
-				float vxA = aabbA->velocity.x;
-				float vxB = aabbB->velocity.x;
-				aabbA->velocity.x = vxB;
-				aabbB->velocity.x = vxA;
-			}
-			
+			// Swap horizontal velocities
+			if (aabbA->isStatic && !aabbB->isStatic) aabbB->velocity.x = 0.0f;
+			else if (!aabbA->isStatic && aabbB->isStatic) aabbA->velocity.x = 0.0f;
+			else { float vxA = aabbA->velocity.x; float vxB = aabbB->velocity.x; aabbA->velocity.x = vxB; aabbB->velocity.x = vxA; }
+
+			// Friction along tangent
+			Vector2 normal = { (d.x >= 0.0f ? 1.0f : -1.0f), 0.0f };
+			Vector2 tangent = { -normal.y, normal.x }; // perpendicular to normal
+
+			Vector2 relVel = aabbB->velocity - aabbA->velocity;
+			float relVelT = Vector2DotProduct(relVel, tangent);
+
+			float u = aabbA->grippiness * aabbB->grippiness;
+
+			// Max friction = u * min(normal forces)
+			Vector2 FgA = world.accelerationGravity * aabbA->mass;
+			Vector2 FgB = world.accelerationGravity * aabbB->mass;
+			Vector2 FnormalA = (normal * -1) * Vector2DotProduct(FgA, normal);
+			Vector2 FnormalB = (normal * -1) * Vector2DotProduct(FgB, normal);
+			float Fmax = u * fmin(Vector2Length(FnormalA), Vector2Length(FnormalB));
+
+			// Friction only reduces relative sliding
+			float frictionMag = Clamp(-relVelT * 50.0f, -Fmax, Fmax);
+			Vector2 Ffriction = tangent * frictionMag;
+
+			// Apply friction correctly
+			if (!aabbA->isStatic) aabbA->netForce -= Ffriction;
+			if (!aabbB->isStatic) aabbB->netForce += Ffriction;
+
 		}
 		else {
 			float sign = (d.y >= 0.0f) ? 1.0f : -1.0f;
 			float push = overlapY * sign;
 
-			if (aabbA->isStatic && !aabbB->isStatic) {
-				aabbB->position.y += push;
-			}
-			else if (!aabbA->isStatic && aabbB->isStatic) {
-				aabbA->position.y -= push;
+			// Separate objects
+			if (aabbA->isStatic && !aabbB->isStatic) aabbB->position.y += push;
+			else if (!aabbA->isStatic && aabbB->isStatic) aabbA->position.y -= push;
+			else { aabbA->position.y -= push * 0.5f; aabbB->position.y += push * 0.5f; }
+
+			// Swap vertical velocities
+			if (aabbA->isStatic && !aabbB->isStatic) aabbB->velocity.y = 0.0f;
+			else if (!aabbA->isStatic && aabbB->isStatic) aabbA->velocity.y = 0.0f;
+			else { float vyA = aabbA->velocity.y; float vyB = aabbB->velocity.y; aabbA->velocity.y = vyB; aabbB->velocity.y = vyA; }
+
+			// Friction along tangent
+			Vector2 normal = { 0.0f, (d.y >= 0.0f ? 1.0f : -1.0f) };
+			Vector2 tangent = { -normal.y, normal.x }; // horizontal
+
+			Vector2 relVel = aabbB->velocity - aabbA->velocity;
+			float relVelT = Vector2DotProduct(relVel, tangent);
+
+			float u = aabbA->grippiness * aabbB->grippiness;
+
+			Vector2 FgA = world.accelerationGravity * aabbA->mass;
+			Vector2 FgB = world.accelerationGravity * aabbB->mass;
+			Vector2 FnormalA = (normal * -1) * Vector2DotProduct(FgA, normal);
+			Vector2 FnormalB = (normal * -1) * Vector2DotProduct(FgB, normal);
+			float Fmax = u * fmin(Vector2Length(FnormalA), Vector2Length(FnormalB));
+
+			float frictionMag = Clamp(-relVelT * 50.0f, -Fmax, Fmax);
+			Vector2 Ffriction = tangent * frictionMag;
+
+			// Only top block gets dragged horizontally by bottom block
+			if (!aabbA->isStatic && !aabbB->isStatic) {
+				if (d.y > 0) aabbB->netForce += Ffriction; // top block
+				else aabbA->netForce += Ffriction;
 			}
 			else {
-				aabbA->position.y -= push * 0.5f;
-				aabbB->position.y += push * 0.5f;
-			}
-			if (aabbA->isStatic && !aabbB->isStatic) {
-				aabbB->velocity.y = 0.0f;
-			}
-			else if (!aabbA->isStatic && aabbB->isStatic) {
-				aabbA->velocity.y = 0.0f;
-			}
-			else {
-				float vyA = aabbA->velocity.y;
-				float vyB = aabbB->velocity.y;
-				aabbA->velocity.y = vyB;
-				aabbB->velocity.y = vyA;
+				if (!aabbA->isStatic) aabbA->netForce -= Ffriction;
+				if (!aabbB->isStatic) aabbB->netForce += Ffriction;
 			}
 		}
 
@@ -636,6 +719,7 @@ void update()
 		newBird->velocity = { speed * (float)cos(angle * DEG2RAD), -speed * (float)sin(angle * DEG2RAD) };
 		newBird->bounciness = restitution;
 		newBird->grippiness = coefficientOfFriction;
+		newBird->tag = "bird";
 
 		world.add(newBird);
 	}
