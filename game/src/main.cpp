@@ -499,9 +499,8 @@ bool AABBAABBOverlap(FizziksAABB* aabbA, FizziksAABB* aabbB) {
 			else if (!aabbA->isStatic && aabbB->isStatic) aabbA->velocity.x = 0.0f;
 			else { float vxA = aabbA->velocity.x; float vxB = aabbB->velocity.x; aabbA->velocity.x = vxB; aabbB->velocity.x = vxA; }
 
-			// Friction along tangent
 			Vector2 normal = { (d.x >= 0.0f ? 1.0f : -1.0f), 0.0f };
-			Vector2 tangent = { -normal.y, normal.x }; // perpendicular to normal
+			Vector2 tangent = { -normal.y, normal.x }; 
 
 			Vector2 relVel = aabbB->velocity - aabbA->velocity;
 			float relVelT = Vector2DotProduct(relVel, tangent);
@@ -515,11 +514,9 @@ bool AABBAABBOverlap(FizziksAABB* aabbA, FizziksAABB* aabbB) {
 			Vector2 FnormalB = (normal * -1) * Vector2DotProduct(FgB, normal);
 			float Fmax = u * fmin(Vector2Length(FnormalA), Vector2Length(FnormalB));
 
-			// Friction only reduces relative sliding
 			float frictionMag = Clamp(-relVelT * 50.0f, -Fmax, Fmax);
 			Vector2 Ffriction = tangent * frictionMag;
 
-			// Apply friction correctly
 			if (!aabbA->isStatic) aabbA->netForce -= Ffriction;
 			if (!aabbB->isStatic) aabbB->netForce += Ffriction;
 
@@ -538,9 +535,8 @@ bool AABBAABBOverlap(FizziksAABB* aabbA, FizziksAABB* aabbB) {
 			else if (!aabbA->isStatic && aabbB->isStatic) aabbA->velocity.y = 0.0f;
 			else { float vyA = aabbA->velocity.y; float vyB = aabbB->velocity.y; aabbA->velocity.y = vyB; aabbB->velocity.y = vyA; }
 
-			// Friction along tangent
 			Vector2 normal = { 0.0f, (d.y >= 0.0f ? 1.0f : -1.0f) };
-			Vector2 tangent = { -normal.y, normal.x }; // horizontal
+			Vector2 tangent = { -normal.y, normal.x };
 
 			Vector2 relVel = aabbB->velocity - aabbA->velocity;
 			float relVelT = Vector2DotProduct(relVel, tangent);
@@ -556,9 +552,8 @@ bool AABBAABBOverlap(FizziksAABB* aabbA, FizziksAABB* aabbB) {
 			float frictionMag = Clamp(-relVelT * 50.0f, -Fmax, Fmax);
 			Vector2 Ffriction = tangent * frictionMag;
 
-			// Only top block gets dragged horizontally by bottom block
 			if (!aabbA->isStatic && !aabbB->isStatic) {
-				if (d.y > 0) aabbB->netForce += Ffriction; // top block
+				if (d.y > 0) aabbB->netForce += Ffriction;
 				else aabbA->netForce += Ffriction;
 			}
 			else {
@@ -654,13 +649,6 @@ bool AABBHalfspaceOverlap(FizziksAABB* aabb, FizziksHalfspace* halfspace) {
 	if (minDot < 0.0f) {
 		float overlap = -minDot;
 
-		if (aabb->isStatic) {
-			
-		}
-		else {
-			aabb->position += n * overlap;
-		}
-
 		//float velAlongNormal = Vector2DotProduct(aabb->velocity, n);
 		//if (velAlongNormal < 0.0f) { // traveling into the plane
 		//	float e = aabb->bounciness * halfspace->bounciness;
@@ -668,6 +656,7 @@ bool AABBHalfspaceOverlap(FizziksAABB* aabb, FizziksHalfspace* halfspace) {
 		//}
 
 		if (!aabb->isStatic) {
+			aabb->position += n * overlap;
 			Vector2 Fgravity = world.accelerationGravity * aabb->mass;
 			Vector2 FgPerp = n * Vector2DotProduct(Fgravity, n);
 			Vector2 Fnormal = FgPerp * -1;
@@ -800,12 +789,25 @@ void draw()
 		world.objekts[i]->draw();
 	}
 
+	
 
 	EndDrawing();
 
 }
+
+enum SlingshotState {
+	SLING_IDLE,
+	SLING_DRAG
+};
+
 int main()
 {
+	Vector2 bird_position = Vector2Zeros;
+	Vector2 slingshot_position = { 105.0f, 525.0f };
+	float slingshot_radius = 10.0f;
+
+	SlingshotState slingshot_state = SLING_IDLE;
+
 
 	InitWindow(InitialWidth, InitialHeight, "Mactavish Carney 101534351 GAME2005");
 	SetTargetFPS(TARGET_FPS);
@@ -814,11 +816,78 @@ int main()
 	world.add(&halfspace);
 
 	MakeDeleteableObjekts();
-
+	bool isBirdCircle = true;
 	while (!WindowShouldClose())
 	{
 		update();
 		draw();
+		DrawRectangle(100, 515, 10, 135, BROWN);
+		Vector2 mouse_position = GetMousePosition();
+		Vector2 dispFromBirdToSling = { 0, 0 };
+
+		
+
+		if (IsKeyPressed(KEY_B)) {
+			if (isBirdCircle == true) {
+				isBirdCircle = false;
+			}
+			else {
+				isBirdCircle = true;
+			}
+		}
+
+		if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && CheckCollisionPointCircle(mouse_position, slingshot_position, slingshot_radius)) {
+			slingshot_state = SLING_DRAG;
+		}
+
+		if (slingshot_state == SLING_DRAG) {
+			dispFromBirdToSling = slingshot_position - bird_position;
+			if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+				bird_position = mouse_position;
+				
+			}
+			else {
+				if (isBirdCircle) {
+					FizziksCircle* newBird = new FizziksCircle();
+					newBird->position = bird_position;
+					newBird->velocity = dispFromBirdToSling * 10;
+					newBird->bounciness = restitution;
+					newBird->grippiness = coefficientOfFriction;
+					newBird->tag = "bird";
+					newBird->color = BLUE;
+					newBird->baseColor = BLUE;
+					world.add(newBird);
+
+					slingshot_state = SLING_IDLE;
+				}
+				else {
+					FizziksAABB* newBird = new FizziksAABB();
+					newBird->position = bird_position;
+					newBird->velocity = dispFromBirdToSling * 10;
+					newBird->bounciness = restitution;
+					newBird->grippiness = coefficientOfFriction;
+					newBird->color = BLUE;
+					newBird->baseColor = BLUE;
+					newBird->sizeXY = { 30, 30 };
+					world.add(newBird);
+
+					slingshot_state = SLING_IDLE;
+				}
+			}
+		}
+		if (isBirdCircle) {
+			DrawCircleV(slingshot_position, slingshot_radius, GREEN);
+			DrawCircleV(bird_position, slingshot_radius, ORANGE);
+		}
+		else {
+			DrawRectangle(slingshot_position.x - (30 / 2), slingshot_position.y - (30 / 2), 30, 30, GREEN);
+			DrawCircleV(bird_position, slingshot_radius, ORANGE);
+		}
+		
+
+		
+
+		
 	}
 
 	CloseWindow();
